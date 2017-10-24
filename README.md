@@ -2,7 +2,7 @@
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 [![CI Status](http://img.shields.io/travis/norio-nomura/ObjectEncoder.svg?style=flat)](https://travis-ci.org/norio-nomura/ObjectEncoder)
 
-[SE-1067 Swift Encoders](https://github.com/apple/swift-evolution/blob/master/proposals/0167-swift-encoders.md) implementation using `[String: Any]`, `[Any]` or `Any` as payload.
+[SE-0167 Swift Encoders](https://github.com/apple/swift-evolution/blob/master/proposals/0167-swift-encoders.md) implementation using `[String: Any]`, `[Any]` or `Any` as payload.
 
 ## Usage
 
