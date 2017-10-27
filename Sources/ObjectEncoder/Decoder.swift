@@ -115,7 +115,7 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
         return try decoder(for: key).unkeyedContainer()
     }
 
-    func superDecoder() throws -> Decoder { return try decoder(for: _ObjectDecodingKey.super) }
+    func superDecoder() throws -> Decoder { return try decoder(for: _ObjectCodingKey.super) }
     func superDecoder(forKey key: Key) throws -> Decoder { return try decoder(for: key) }
 
     // MARK: -
@@ -208,7 +208,7 @@ struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disabl
 
     // MARK: -
 
-    private var currentKey: CodingKey { return _ObjectDecodingKey(index: currentIndex) }
+    private var currentKey: CodingKey { return _ObjectCodingKey(index: currentIndex) }
     private var currentObject: Any { return array[currentIndex] }
     private var currentDecoder: _Decoder { return decoder.decoder(referencing: currentObject, as: currentKey) }
 
@@ -244,30 +244,6 @@ extension _Decoder: SingleValueDecodingContainer {
     func decode(_ type: Double.Type) throws -> Double { return try cast(object) }
     func decode(_ type: String.Type) throws -> String { return try cast(object) }
     func decode<T>(_ type: T.Type)   throws -> T where T: Decodable { return try T(from: self) }
-}
-
-// MARK: - CodingKey for `_UnkeyedDecodingContainer` and `superDecoders`
-
-struct _ObjectDecodingKey: CodingKey { // swiftlint:disable:this type_name
-    var stringValue: String
-    var intValue: Int?
-
-    init?(stringValue: String) {
-        self.stringValue = stringValue
-        self.intValue = nil
-    }
-
-    init?(intValue: Int) {
-        self.stringValue = "\(intValue)"
-        self.intValue = intValue
-    }
-
-    init(index: Int) {
-        self.stringValue = "Index \(index)"
-        self.intValue = index
-    }
-
-    static let `super` = _ObjectDecodingKey(stringValue: "super")!
 }
 
 // MARK: - DecodingError helpers

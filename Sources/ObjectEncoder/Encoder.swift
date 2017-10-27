@@ -116,7 +116,7 @@ class _ObjectReferencingEncoder: _Encoder { // swiftlint:disable:this type_name
     fileprivate init(referencing encoder: _Encoder, at index: Int) {
         self.encoder = encoder
         reference = .sequence(index)
-        super.init(userInfo: encoder.userInfo, codingPath: encoder.codingPath + [_ObjectEncodingKey(index: index)])
+        super.init(userInfo: encoder.userInfo, codingPath: encoder.codingPath + [_ObjectCodingKey(index: index)])
     }
 
     deinit {
@@ -167,7 +167,7 @@ struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol { 
         return encoder(for: key).unkeyedContainer()
     }
 
-    func superEncoder() -> Encoder { return encoder(for: _ObjectEncodingKey.super) }
+    func superEncoder() -> Encoder { return encoder(for: _ObjectCodingKey.super) }
     func superEncoder(forKey key: Key) -> Encoder { return encoder(for: key) }
 
     // MARK: -
@@ -264,9 +264,9 @@ extension _Encoder: SingleValueEncodingContainer {
     }
 }
 
-// MARK: - CodingKey for `_UnkeyedEncodingContainer` and `superEncoders`
+// MARK: - CodingKey for `_UnkeyedEncodingContainer`, `_UnkeyedDecodingContainer`, `superEncoders` or `superDecoders`
 
-struct _ObjectEncodingKey: CodingKey { // swiftlint:disable:this type_name
+struct _ObjectCodingKey: CodingKey { // swiftlint:disable:this type_name
     var stringValue: String
     var intValue: Int?
 
@@ -280,10 +280,10 @@ struct _ObjectEncodingKey: CodingKey { // swiftlint:disable:this type_name
         self.intValue = intValue
     }
 
-    fileprivate init(index: Int) {
+    init(index: Int) {
         self.stringValue = "Index \(index)"
         self.intValue = index
     }
 
-    static let `super` = _ObjectEncodingKey(stringValue: "super")!
+    static let `super` = _ObjectCodingKey(stringValue: "super")!
 }
