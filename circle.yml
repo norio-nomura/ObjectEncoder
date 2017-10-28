@@ -6,10 +6,18 @@ jobs:
       xcode: "9.0"
     steps:
       - checkout
-      - run: xcodebuild -scheme ObjectEncoder-Package build-for-testing test-without-building
-      - run: xcodebuild -scheme ObjectEncoder-Package build-for-testing test-without-building -sdk iphonesimulator -destination "name=iPhone 8"
-      - run: xcodebuild -scheme ObjectEncoder-Package build-for-testing test-without-building -sdk appletvsimulator -destination "name=Apple TV 4K"
-      - run: xcodebuild -scheme ObjectEncoder-Package build -sdk watchsimulator -destination "name=Apple Watch Series 3 - 38mm"
+      - run: xcodebuild -scheme ObjectEncoder-Package build-for-testing test-without-building|xcpretty -r junit
+      - store_test_results:
+          path: build/reports/
+      - run: xcodebuild -scheme ObjectEncoder-Package build-for-testing test-without-building -sdk iphonesimulator -destination "name=iPhone 8"|xcpretty -r junit
+      - store_test_results:
+          path: build/reports/
+      - run: xcodebuild -scheme ObjectEncoder-Package build-for-testing test-without-building -sdk appletvsimulator -destination "name=Apple TV 4K"|xcpretty -r junit
+      - store_test_results:
+          path: build/reports/
+      - run: xcodebuild -scheme ObjectEncoder-Package build -sdk watchsimulator -destination "name=Apple Watch Series 3 - 38mm"|xcpretty -r junit
+      - store_test_results:
+          path: build/reports/
       - run: swift test
 
   linux_swift_4:
