@@ -8,7 +8,7 @@
 
 import Foundation
 
-public class ObjectEncoder {
+public struct ObjectEncoder {
     public init() {}
     public func encode<T>(_ value: T, userInfo: [CodingUserInfoKey: Any] = [:]) throws -> Any where T: Swift.Encodable {
         do {
