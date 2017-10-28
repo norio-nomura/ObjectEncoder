@@ -1,6 +1,6 @@
 # ObjectEncoder for Swift
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
-[![CI Status](http://img.shields.io/travis/norio-nomura/ObjectEncoder.svg?style=flat)](https://travis-ci.org/norio-nomura/ObjectEncoder)
+[![CircleCI](https://circleci.com/gh/norio-nomura/ObjectEncoder.svg?style=svg)](https://circleci.com/gh/norio-nomura/ObjectEncoder)
 
 [SE-0167 Swift Encoders](https://github.com/apple/swift-evolution/blob/master/proposals/0167-swift-encoders.md) implementation using `[String: Any]`, `[Any]` or `Any` as payload.
 
