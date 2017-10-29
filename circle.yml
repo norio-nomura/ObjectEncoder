@@ -19,9 +19,6 @@ jobs:
       - store_test_results:
           path: build/reports/
       - run: swift test
-      - run: brew install swiftlint && swiftlint lint --strict --reporter junit > build/reports/junit.xml
-      - store_test_results:
-          path: build/reports/
 
   linux_swift_4:
     docker:
@@ -29,6 +26,15 @@ jobs:
     steps:
       - checkout
       - run: swift test
+  docker_swiftlint:
+    docker:
+      - image: norionomura/swiftlint:0.23.1
+    steps:
+      - checkout
+      - run: mkdir -p build/reports/
+      - run: swiftlint lint --strict --reporter junit > build/reports/junit.xml
+      - store_test_results:
+          path: build/reports/
 
 workflows:
   version: 2
@@ -36,3 +42,4 @@ workflows:
     jobs:
       - xcode_9
       - linux_swift_4
+      - docker_swiftlint
