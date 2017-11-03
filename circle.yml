@@ -33,9 +33,20 @@ jobs:
           path: build/reports/
       - run: swift test
 
-  linux_swift_4:
+  linux_swift_4.0.0:
     docker:
-      - image: norionomura/swiftlint:swift-4.0
+      - image: norionomura/swiftlint:swift-4.0.0
+    steps:
+      - checkout
+      - run: swift test
+      - run: mkdir -p build/reports/
+      - run: swiftlint lint --strict --reporter junit > build/reports/junit.xml
+      - store_test_results:
+          path: build/reports/
+
+  linux_swift_4.0.2:
+    docker:
+      - image: norionomura/swiftlint:swift-4.0.2
     steps:
       - checkout
       - run: swift test
@@ -50,4 +61,5 @@ workflows:
     jobs:
       - xcode_9.0
       - xcode_9.1
-      - linux_swift_4
+      - linux_swift_4.0.0
+      - linux_swift_4.0.2
