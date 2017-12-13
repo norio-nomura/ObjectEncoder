@@ -5,8 +5,8 @@ import XCTest
 
 class ObjectEncoderTests: XCTestCase {
     func testValuesInSingleValueContainer() throws {
-        _testRoundTrip(of: true)
-        _testRoundTrip(of: false)
+        _testRoundTrip(of: true, expectedObject: true)
+        _testRoundTrip(of: false, expectedObject: false)
 
         _testFixedWidthInteger(type: Int.self)
         _testFixedWidthInteger(type: Int8.self)
@@ -22,8 +22,8 @@ class ObjectEncoderTests: XCTestCase {
         _testFloatingPoint(type: Float.self)
         _testFloatingPoint(type: Double.self)
 
-        _testRoundTrip(of: "")
-        _testRoundTrip(of: URL(string: "https://apple.com")!)
+        _testRoundTrip(of: "", expectedObject: "")
+        _testRoundTrip(of: URL(string: "https://apple.com")!, expectedObject: ["relative": "https://apple.com"])
     }
 
     func testValuesInKeyedContainer() throws {
@@ -111,16 +111,17 @@ class ObjectEncoderTests: XCTestCase {
     private func _testFixedWidthInteger<T>(type: T.Type,
                                            file: StaticString = #file,
                                            line: UInt = #line) where T: FixedWidthInteger & Codable {
-        _testRoundTrip(of: type.min, file: file, line: line)
-        _testRoundTrip(of: type.max, file: file, line: line)
+        _testRoundTrip(of: type.min, expectedObject: type.min, file: file, line: line)
+        _testRoundTrip(of: type.max, expectedObject: type.max, file: file, line: line)
     }
 
     private func _testFloatingPoint<T>(type: T.Type,
                                        file: StaticString = #file,
                                        line: UInt = #line) where T: FloatingPoint & Codable {
-        _testRoundTrip(of: type.leastNormalMagnitude, file: file, line: line)
-        _testRoundTrip(of: type.greatestFiniteMagnitude, file: file, line: line)
-        _testRoundTrip(of: type.infinity, file: file, line: line)
+        _testRoundTrip(of: type.leastNormalMagnitude, expectedObject: type.leastNormalMagnitude, file: file, line: line)
+        _testRoundTrip(of: type.greatestFiniteMagnitude,
+                       expectedObject: type.greatestFiniteMagnitude, file: file, line: line)
+        _testRoundTrip(of: type.infinity, expectedObject: type.infinity, file: file, line: line)
     }
 
     private func _testRoundTrip<T>(of object: T,
