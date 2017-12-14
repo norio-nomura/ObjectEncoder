@@ -356,6 +356,9 @@ struct _ObjectCodingKey: CodingKey { // swiftlint:disable:this type_name
 // MARK: - ObjectEncoder.EncodingStrategy
 
 extension ObjectEncoder {
+    /// The strategy to use for encoding `Data` values.
+    public typealias DataEncodingStrategy = EncodingStrategy<Data>
+    /// The strategy to use for encoding `Date` values.
     public typealias DateEncodingStrategy = EncodingStrategy<Date>
 }
 
@@ -366,6 +369,18 @@ extension ObjectEncoder.EncodingStrategy {
     /// the encoder will encode an empty automatic container in its place.
     public static func custom(_ closure: @escaping (T, Encoder) throws -> Void) -> ObjectEncoder.EncodingStrategy<T> {
         return .init(closure: closure)
+    }
+}
+
+extension ObjectEncoder.EncodingStrategy where T == Data {
+    /// Defer to `Data` for choosing an encoding.
+    public static let deferredToData = ObjectEncoder.EncodingStrategy<Data>([Data.self, NSData.self]) {
+        try $0.encode(to: $1)
+    }
+
+    /// Encoded the `Data` as a Base64-encoded string. This is the default strategy.
+    public static let base64 = ObjectEncoder.EncodingStrategy<Data>([Data.self, NSData.self]) {
+        try $0.base64EncodedString().encode(to: $1)
     }
 }
 

@@ -332,13 +332,31 @@ private func _typeMismatch(at codingPath: [CodingKey], expectation: Any.Type, re
 // MARK: - ObjectDecoder.DecodingStrategy
 
 extension ObjectDecoder {
+    /// The strategy to use for decoding `Data` values.
+    public typealias DataDecodingStrategy = DecodingStrategy<Data>
+    /// The strategy to use for decoding `Date` values.
     public typealias DateDecodingStrategy = DecodingStrategy<Date>
 }
 
 extension ObjectDecoder.DecodingStrategy {
-    /// Decode the `Date` as a custom value decoded by the given closure.
+    /// Decode the `T` as a custom value decoded by the given closure.
     public static func custom(_ closure: @escaping (Decoder) throws -> T) -> ObjectDecoder.DecodingStrategy<T> {
         return .init(closure: closure)
+    }
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Data {
+    /// Defer to `Data` for decoding.
+    public static let deferredToData = ObjectDecoder.DecodingStrategy<Data>([Data.self, NSData.self]) {
+        try Data(from: $0)
+    }
+
+    /// Decode the `Data` from a Base64-encoded string. This is the default strategy.
+    public static let base64 = ObjectDecoder.DecodingStrategy<Data>([Data.self, NSData.self]) {
+        guard let data = Data(base64Encoded: try String(from: $0)) else {
+            throw _dataCorrupted(at: $0.codingPath, "Encountered Data is not valid Base64.")
+        }
+        return data
     }
 }
 

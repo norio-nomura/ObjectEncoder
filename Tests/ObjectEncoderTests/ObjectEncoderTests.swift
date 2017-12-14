@@ -120,6 +120,52 @@ class ObjectEncoderTests: XCTestCase {
                        dateDecodingStrategy: .custom(decodeEmpty))
     }
 
+    // MARK: - Data Strategy Tests
+    func testEncodingData() {
+        let data = Data(bytes: [0xDE, 0xAD, 0xBE, 0xEF])
+
+        let expectedObject = [0xDE, 0xAD, 0xBE, 0xEF]
+        _testRoundTrip(of: data,
+                       expectedObject: expectedObject,
+                       dataEncodingStrategy: .deferredToData,
+                       dataDecodingStrategy: .deferredToData)
+    }
+
+    func testEncodingDataBase64() {
+        let data = Data(bytes: [0xDE, 0xAD, 0xBE, 0xEF])
+
+        let expectedObject = "3q2+7w=="
+        _testRoundTrip(of: data,
+                       expectedObject: expectedObject,
+                       dataEncodingStrategy: .base64,
+                       dataDecodingStrategy: .base64)
+    }
+
+    func testEncodingDataCustom() {
+        // We'll encode a number instead of data.
+        let encode = { (_ data: Data, _ encoder: Encoder) throws -> Void in
+            var container = encoder.singleValueContainer()
+            try container.encode(42)
+        }
+        let decode = { (_: Decoder) throws -> Data in return Data() }
+
+        let expectedObject = 42
+        _testRoundTrip(of: Data(),
+                       expectedObject: expectedObject,
+                       dataEncodingStrategy: .custom(encode),
+                       dataDecodingStrategy: .custom(decode))
+    }
+
+    func testEncodingDataCustomEmpty() {
+        // Encoding nothing should encode an empty keyed container ({}).
+        let encode = { (_: Data, _: Encoder) throws -> Void in }
+        let decode = { (_: Decoder) throws -> Data in return Data() }
+
+        _testRoundTrip(of: Data(),
+                       dataEncodingStrategy: .custom(encode),
+                       dataDecodingStrategy: .custom(decode))
+    }
+
     // MARK: -
 
     private func _testFixedWidthInteger<T>(type: T.Type,
@@ -142,17 +188,21 @@ class ObjectEncoderTests: XCTestCase {
                                    expectedObject: Any? = nil,
                                    dateEncodingStrategy: ObjectEncoder.DateEncodingStrategy? = nil,
                                    dateDecodingStrategy: ObjectDecoder.DateDecodingStrategy? = nil,
+                                   dataEncodingStrategy: ObjectEncoder.DataEncodingStrategy? = nil,
+                                   dataDecodingStrategy: ObjectDecoder.DataDecodingStrategy? = nil,
                                    file: StaticString = #file,
                                    line: UInt = #line) where T: Codable, T: Equatable {
         do {
             var encoder = ObjectEncoder()
             encoder.encodingStrategies[Date.self] = dateEncodingStrategy
+            encoder.encodingStrategies[Data.self] = dataEncodingStrategy
             let producedObject = try encoder.encode(object)
             if let produced = producedObject as? NSObject, let expected = expectedObject as? NSObject {
                 XCTAssertEqual(produced, expected, file: file, line: line)
             }
             var decoder = ObjectDecoder()
             decoder.decodingStrategies[Date.self] = dateDecodingStrategy
+            decoder.decodingStrategies[Data.self] = dataDecodingStrategy
             let decoded = try decoder.decode(T.self, from: producedObject)
             XCTAssertEqual(decoded, object, "\(T.self) did not round-trip to an equal value.",
                 file: file, line: line)
@@ -179,6 +229,10 @@ class ObjectEncoderTests: XCTestCase {
         ("testEncodingDateFormatted", testEncodingDateFormatted),
         ("testEncodingDateCustom", testEncodingDateCustom),
         ("testEncodingDateCustomEmpty", testEncodingDateCustomEmpty),
+        ("testEncodingData", testEncodingData),
+        ("testEncodingDataBase64", testEncodingDataBase64),
+        ("testEncodingDataCustom", testEncodingDataCustom),
+        ("testEncodingDataCustomEmpty", testEncodingDataCustomEmpty)
     ]
 }
 
