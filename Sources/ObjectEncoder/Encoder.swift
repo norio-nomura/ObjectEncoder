@@ -378,7 +378,9 @@ var iso8601Formatter: ISO8601DateFormatter = {
 
 extension ObjectEncoder.EncodingStrategy where T == Date {
     /// Defer to `Date` for choosing an encoding. This is the default strategy.
-    static let deferredToDate = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) { try $0.encode(to: $1) }
+    public static let deferredToDate = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) {
+        try $0.encode(to: $1)
+    }
 
     /// Encode the `Date` as a UNIX timestamp (as a `Double`).
     public static let secondsSince1970 = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) {

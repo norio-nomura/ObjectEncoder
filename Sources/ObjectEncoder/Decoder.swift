@@ -343,8 +343,10 @@ extension ObjectDecoder.DecodingStrategy {
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Date {
-    /// Defer to `Date` for decoding. This is the default strategy.
-    static let deferredToDate = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) { try Date(from: $0) }
+    /// Defer to `Date` for decoding.
+    public static let deferredToDate = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+        try Date(from: $0)
+    }
 
     /// Decode the `Date` as a UNIX timestamp from a `Double`.
     public static let secondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
