@@ -23,21 +23,46 @@ public struct ObjectDecoder {
     }
 
     public struct DecodingStrategy<T: Decodable> {
+        fileprivate let identifiers: [ObjectIdentifier]
         fileprivate let closure: (Decoder) throws -> T
+        init(_ types: [Any.Type] = [T.self], closure: @escaping (Decoder) throws -> T) {
+            self.closure = closure
+            self.identifiers = types.map(ObjectIdentifier.init)
+        }
     }
 
-    public typealias DateDecodingStrategy = DecodingStrategy<Date>
+    public struct DecodingStrategies {
+        var strategies = [ObjectIdentifier: Any]()
+        public subscript<T>(type: T.Type) -> DecodingStrategy<T>? {
+            get { return strategies[ObjectIdentifier(type)] as? DecodingStrategy<T> }
+            set {
+                if let newValue = newValue {
+                    precondition(newValue.identifiers.contains(ObjectIdentifier(type)))
+                    newValue.identifiers.forEach { strategies[$0] = newValue }
+                } else {
+                    if let strategy = strategies[ObjectIdentifier(type)] as? DecodingStrategy<T> {
+                        strategy.identifiers.forEach { strategies[$0] = nil }
+                    }
+                    strategies[ObjectIdentifier(type)] = nil
+                }
+            }
+        }
+        public subscript<T>(types: [Any.Type]) -> DecodingStrategy<T>? {
+            get { return types.first.map { strategies[ObjectIdentifier($0)] } as? DecodingStrategy<T> }
+            set { types.forEach { strategies[ObjectIdentifier($0)] = newValue } }
+        }
+    }
 
-    /// The strategy to use for decoding `Date` values.
-    public var dateDecodingStrategy: DateDecodingStrategy {
-        get { return options.dateDecodingStrategy }
-        set { options.dateDecodingStrategy = newValue }
+    /// The strategis to use for decoding values.
+    public var decodingStrategies: DecodingStrategies {
+        get { return options.decodingStrategies }
+        set { options.decodingStrategies = newValue }
     }
 
     // MARK: -
 
     fileprivate struct Options {
-        fileprivate var dateDecodingStrategy: ObjectDecoder.DecodingStrategy<Date> = .deferredToDate
+        fileprivate var decodingStrategies = DecodingStrategies()
     }
 
     fileprivate var options = Options()
@@ -77,11 +102,15 @@ struct _Decoder: Decoder { // swiftlint:disable:this type_name
 
     // MARK: -
 
-    fileprivate func cast<T>(_ object: Any) throws -> T {
-        guard let value = object as? T else {
-            throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
+    fileprivate func cast<T: Decodable>(_ object: Any) throws -> T {
+        if let strategy = options.decodingStrategies[T.self] {
+            return try strategy.closure(self)
+        } else {
+            guard let value = object as? T else {
+                throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
+            }
+            return value
         }
-        return value
     }
 
     /// create a new `_Decoder` instance referencing `object` as `key` inheriting `userInfo`
@@ -269,8 +298,8 @@ extension _Decoder: SingleValueDecodingContainer {
     func decode(_ type: Double.Type) throws -> Double { return try cast(object) }
     func decode(_ type: String.Type) throws -> String { return try cast(object) }
     func decode<T>(_ type: T.Type)   throws -> T where T: Decodable {
-        if T.self == Date.self || T.self == NSDate.self {
-            return try options.dateDecodingStrategy.closure(self) as! T // swiftlint:disable:this force_cast
+        if let strategy = options.decodingStrategies[type] {
+            return try strategy.closure(self)
         } else {
             return try T(from: self)
         }
@@ -302,6 +331,10 @@ private func _typeMismatch(at codingPath: [CodingKey], expectation: Any.Type, re
 
 // MARK: - ObjectDecoder.DecodingStrategy
 
+extension ObjectDecoder {
+    public typealias DateDecodingStrategy = DecodingStrategy<Date>
+}
+
 extension ObjectDecoder.DecodingStrategy {
     /// Decode the `Date` as a custom value decoded by the given closure.
     public static func custom(_ closure: @escaping (Decoder) throws -> T) -> ObjectDecoder.DecodingStrategy<T> {
@@ -311,20 +344,20 @@ extension ObjectDecoder.DecodingStrategy {
 
 extension ObjectDecoder.DecodingStrategy where T == Date {
     /// Defer to `Date` for decoding. This is the default strategy.
-    static let deferredToDate = ObjectDecoder.DecodingStrategy<Date> { try Date(from: $0) }
+    static let deferredToDate = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) { try Date(from: $0) }
 
     /// Decode the `Date` as a UNIX timestamp from a `Double`.
-    public static let secondsSince1970 = ObjectDecoder.DecodingStrategy<Date> {
+    public static let secondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
         Date(timeIntervalSince1970: try Double(from: $0))
     }
 
     /// Decode the `Date` as UNIX millisecond timestamp from a `Double`.
-    public static let millisecondsSince1970 = ObjectDecoder.DecodingStrategy<Date> {
+    public static let millisecondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
         Date(timeIntervalSince1970: try Double(from: $0) / 1000.0)
     }
     /// Decode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
     @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-    public static let iso8601 = ObjectDecoder.DecodingStrategy<Date> {
+    public static let iso8601 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
         guard let date = iso8601Formatter.date(from: try String(from: $0)) else {
             throw _dataCorrupted(at: $0.codingPath, "Expected date string to be ISO8601-formatted.")
         }
@@ -333,7 +366,7 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
 
     /// Decode the `Date` as a string parsed by the given formatter.
     public static func formatted(_ formatter: DateFormatter) -> ObjectDecoder.DecodingStrategy<Date> {
-        return ObjectDecoder.DecodingStrategy {
+        return ObjectDecoder.DecodingStrategy([Date.self, NSDate.self]) {
             guard let date = formatter.date(from: try String(from: $0)) else {
                 throw _dataCorrupted(at: $0.codingPath, "Date string does not match format expected by formatter.")
             }

@@ -132,13 +132,13 @@ class ObjectEncoderTests: XCTestCase {
                                    line: UInt = #line) where T: Codable, T: Equatable {
         do {
             var encoder = ObjectEncoder()
-            encoder.dateEncodingStrategy = dateEncodingStrategy
+            encoder.encodingStrategies[Date.self] = dateEncodingStrategy
             let producedObject = try encoder.encode(object)
             if let produced = producedObject as? NSObject, let expected = expectedObject as? NSObject {
                 XCTAssertEqual(produced, expected, file: file, line: line)
             }
             var decoder = ObjectDecoder()
-            decoder.dateDecodingStrategy = dateDecodingStrategy
+            decoder.decodingStrategies[Date.self] = dateDecodingStrategy
             let decoded = try decoder.decode(T.self, from: producedObject)
             XCTAssertEqual(decoded, object, "\(T.self) did not round-trip to an equal value.",
                 file: file, line: line)
