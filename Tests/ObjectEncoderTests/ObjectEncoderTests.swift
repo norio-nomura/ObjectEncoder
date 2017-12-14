@@ -5,8 +5,8 @@ import XCTest
 
 class ObjectEncoderTests: XCTestCase {
     func testValuesInSingleValueContainer() throws {
-        _testRoundTrip(of: true)
-        _testRoundTrip(of: false)
+        _testRoundTrip(of: true, expectedObject: true)
+        _testRoundTrip(of: false, expectedObject: false)
 
         _testFixedWidthInteger(type: Int.self)
         _testFixedWidthInteger(type: Int8.self)
@@ -22,8 +22,8 @@ class ObjectEncoderTests: XCTestCase {
         _testFloatingPoint(type: Float.self)
         _testFloatingPoint(type: Double.self)
 
-        _testRoundTrip(of: "")
-        _testRoundTrip(of: URL(string: "https://apple.com")!)
+        _testRoundTrip(of: "", expectedObject: "")
+        _testRoundTrip(of: URL(string: "https://apple.com")!, expectedObject: ["relative": "https://apple.com"])
     }
 
     func testValuesInKeyedContainer() throws {
@@ -52,28 +52,158 @@ class ObjectEncoderTests: XCTestCase {
         _testRoundTrip(of: NestedContainersTestType(testSuperCoder: true))
     }
 
+    // MARK: - Date Strategy Tests
+    func testEncodingDate() {
+        _testRoundTrip(of: Date())
+    }
+
+    func testEncodingDateSecondsSince1970() {
+        // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
+        _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
+                       expectedObject: 1000.0,
+                       dateEncodingStrategy: .secondsSince1970,
+                       dateDecodingStrategy: .secondsSince1970)
+    }
+
+    func testEncodingDateMillisecondsSince1970() {
+        // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
+        _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
+                       expectedObject: 1000000.0,
+                       dateEncodingStrategy: .millisecondsSince1970,
+                       dateDecodingStrategy: .millisecondsSince1970)
+    }
+
+    func testEncodingDateISO8601() {
+        if #available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *) {
+            // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
+            _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
+                           expectedObject: "1970-01-01T00:16:40Z",
+                           dateEncodingStrategy: .iso8601,
+                           dateDecodingStrategy: .iso8601)
+        }
+    }
+
+    func testEncodingDateFormatted() {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        formatter.timeStyle = .full
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "GMT")
+        // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
+        _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
+                       expectedObject: "Thursday, January 1, 1970 at 12:16:40 AM Greenwich Mean Time",
+                       dateEncodingStrategy: .formatted(formatter),
+                       dateDecodingStrategy: .formatted(formatter))
+    }
+
+    func testEncodingDateCustom() {
+        let timestamp = Date()
+        // We'll encode a number instead of a date.
+        let encodeNumber = { (_ data: Date, _ encoder: Encoder) throws -> Void in
+            var container = encoder.singleValueContainer()
+            try container.encode(42)
+        }
+        let decodeNumber = { (_: Decoder) throws -> Date in return timestamp }
+        _testRoundTrip(of: timestamp,
+                       expectedObject: 42,
+                       dateEncodingStrategy: .custom(encodeNumber),
+                       dateDecodingStrategy: .custom(decodeNumber))
+    }
+
+    func testEncodingDateCustomEmpty() {
+        let timestamp = Date()
+        // Encoding nothing should encode an empty keyed container ({}).
+        let encodeEmpty = { (_: Date, _: Encoder) throws -> Void in }
+        let decodeEmpty = { (_: Decoder) throws -> Date in return timestamp }
+        _testRoundTrip(of: timestamp,
+                       dateEncodingStrategy: .custom(encodeEmpty),
+                       dateDecodingStrategy: .custom(decodeEmpty))
+    }
+
+    // MARK: - Data Strategy Tests
+    func testEncodingData() {
+        let data = Data(bytes: [0xDE, 0xAD, 0xBE, 0xEF])
+
+        let expectedObject = [0xDE, 0xAD, 0xBE, 0xEF]
+        _testRoundTrip(of: data,
+                       expectedObject: expectedObject,
+                       dataEncodingStrategy: .deferredToData,
+                       dataDecodingStrategy: .deferredToData)
+    }
+
+    func testEncodingDataBase64() {
+        let data = Data(bytes: [0xDE, 0xAD, 0xBE, 0xEF])
+
+        let expectedObject = "3q2+7w=="
+        _testRoundTrip(of: data,
+                       expectedObject: expectedObject,
+                       dataEncodingStrategy: .base64,
+                       dataDecodingStrategy: .base64)
+    }
+
+    func testEncodingDataCustom() {
+        // We'll encode a number instead of data.
+        let encode = { (_ data: Data, _ encoder: Encoder) throws -> Void in
+            var container = encoder.singleValueContainer()
+            try container.encode(42)
+        }
+        let decode = { (_: Decoder) throws -> Data in return Data() }
+
+        let expectedObject = 42
+        _testRoundTrip(of: Data(),
+                       expectedObject: expectedObject,
+                       dataEncodingStrategy: .custom(encode),
+                       dataDecodingStrategy: .custom(decode))
+    }
+
+    func testEncodingDataCustomEmpty() {
+        // Encoding nothing should encode an empty keyed container ({}).
+        let encode = { (_: Data, _: Encoder) throws -> Void in }
+        let decode = { (_: Decoder) throws -> Data in return Data() }
+
+        _testRoundTrip(of: Data(),
+                       dataEncodingStrategy: .custom(encode),
+                       dataDecodingStrategy: .custom(decode))
+    }
+
+    // MARK: -
+
     private func _testFixedWidthInteger<T>(type: T.Type,
                                            file: StaticString = #file,
                                            line: UInt = #line) where T: FixedWidthInteger & Codable {
-        _testRoundTrip(of: type.min, file: file, line: line)
-        _testRoundTrip(of: type.max, file: file, line: line)
+        _testRoundTrip(of: type.min, expectedObject: type.min, file: file, line: line)
+        _testRoundTrip(of: type.max, expectedObject: type.max, file: file, line: line)
     }
 
     private func _testFloatingPoint<T>(type: T.Type,
                                        file: StaticString = #file,
                                        line: UInt = #line) where T: FloatingPoint & Codable {
-        _testRoundTrip(of: type.leastNormalMagnitude, file: file, line: line)
-        _testRoundTrip(of: type.greatestFiniteMagnitude, file: file, line: line)
-        _testRoundTrip(of: type.infinity, file: file, line: line)
+        _testRoundTrip(of: type.leastNormalMagnitude, expectedObject: type.leastNormalMagnitude, file: file, line: line)
+        _testRoundTrip(of: type.greatestFiniteMagnitude,
+                       expectedObject: type.greatestFiniteMagnitude, file: file, line: line)
+        _testRoundTrip(of: type.infinity, expectedObject: type.infinity, file: file, line: line)
     }
 
     private func _testRoundTrip<T>(of object: T,
                                    expectedObject: Any? = nil,
+                                   dateEncodingStrategy: ObjectEncoder.DateEncodingStrategy? = nil,
+                                   dateDecodingStrategy: ObjectDecoder.DateDecodingStrategy? = nil,
+                                   dataEncodingStrategy: ObjectEncoder.DataEncodingStrategy? = nil,
+                                   dataDecodingStrategy: ObjectDecoder.DataDecodingStrategy? = nil,
                                    file: StaticString = #file,
                                    line: UInt = #line) where T: Codable, T: Equatable {
         do {
-            let producedOjbect = try ObjectEncoder().encode(object)
-            let decoded = try ObjectDecoder().decode(T.self, from: producedOjbect)
+            var encoder = ObjectEncoder()
+            encoder.encodingStrategies[Date.self] = dateEncodingStrategy
+            encoder.encodingStrategies[Data.self] = dataEncodingStrategy
+            let producedObject = try encoder.encode(object)
+            if let produced = producedObject as? NSObject, let expected = expectedObject as? NSObject {
+                XCTAssertEqual(produced, expected, file: file, line: line)
+            }
+            var decoder = ObjectDecoder()
+            decoder.decodingStrategies[Date.self] = dateDecodingStrategy
+            decoder.decodingStrategies[Data.self] = dataDecodingStrategy
+            let decoded = try decoder.decode(T.self, from: producedObject)
             XCTAssertEqual(decoded, object, "\(T.self) did not round-trip to an equal value.",
                 file: file, line: line)
 
@@ -91,7 +221,18 @@ class ObjectEncoderTests: XCTestCase {
         ("testValuesInKeyedContainer", testValuesInKeyedContainer),
         ("testValuesInUnkeyedContainer", testValuesInUnkeyedContainer),
         ("testNestedContainerCodingPaths", testNestedContainerCodingPaths),
-        ("testSuperEncoderCodingPaths", testSuperEncoderCodingPaths)
+        ("testSuperEncoderCodingPaths", testSuperEncoderCodingPaths),
+        ("testEncodingDate", testEncodingDate),
+        ("testEncodingDateSecondsSince1970", testEncodingDateSecondsSince1970),
+        ("testEncodingDateMillisecondsSince1970", testEncodingDateMillisecondsSince1970),
+        ("testEncodingDateISO8601", testEncodingDateISO8601),
+        ("testEncodingDateFormatted", testEncodingDateFormatted),
+        ("testEncodingDateCustom", testEncodingDateCustom),
+        ("testEncodingDateCustomEmpty", testEncodingDateCustomEmpty),
+        ("testEncodingData", testEncodingData),
+        ("testEncodingDataBase64", testEncodingDataBase64),
+        ("testEncodingDataCustom", testEncodingDataCustom),
+        ("testEncodingDataCustomEmpty", testEncodingDataCustomEmpty)
     ]
 }
 

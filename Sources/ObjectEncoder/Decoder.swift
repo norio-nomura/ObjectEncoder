@@ -14,23 +14,73 @@ public struct ObjectDecoder {
                           from object: Any,
                           userInfo: [CodingUserInfoKey: Any] = [:]) throws -> T where T: Decodable {
         do {
-            return try _Decoder(referencing: object, userInfo: userInfo).singleValueContainer().decode(T.self)
+            return try _Decoder(object, options, userInfo).singleValueContainer().decode(T.self)
         } catch let error as DecodingError {
             throw error
         } catch {
-            throw DecodingError.dataCorrupted(.init(codingPath: [],
-                                                    debugDescription: "The given data was not valid Object.",
-                                                    underlyingError: error))
+            throw _dataCorrupted(at: [], "The given data was not valid Object.", error)
         }
     }
+
+    public struct DecodingStrategy<T: Decodable> {
+        fileprivate let identifiers: [ObjectIdentifier]
+        fileprivate let closure: (Decoder) throws -> T
+        public init(_ types: [Any.Type] = [T.self], closure: @escaping (Decoder) throws -> T) {
+            self.closure = closure
+            self.identifiers = types.map(ObjectIdentifier.init)
+        }
+    }
+
+    public struct DecodingStrategies {
+        var strategies = [ObjectIdentifier: Any]()
+        public subscript<T>(type: T.Type) -> DecodingStrategy<T>? {
+            get { return strategies[ObjectIdentifier(type)] as? DecodingStrategy<T> }
+            set {
+                if let newValue = newValue {
+                    precondition(newValue.identifiers.contains(ObjectIdentifier(type)))
+                    newValue.identifiers.forEach { strategies[$0] = newValue }
+                } else {
+                    if let strategy = strategies[ObjectIdentifier(type)] as? DecodingStrategy<T> {
+                        strategy.identifiers.forEach { strategies[$0] = nil }
+                    }
+                    strategies[ObjectIdentifier(type)] = nil
+                }
+            }
+        }
+        public subscript<T>(types: [Any.Type]) -> DecodingStrategy<T>? {
+            get { return types.first.map { strategies[ObjectIdentifier($0)] } as? DecodingStrategy<T> }
+            set { types.forEach { strategies[ObjectIdentifier($0)] = newValue } }
+        }
+    }
+
+    /// The strategis to use for decoding values.
+    public var decodingStrategies: DecodingStrategies {
+        get { return options.decodingStrategies }
+        set { options.decodingStrategies = newValue }
+    }
+
+    // MARK: -
+
+    fileprivate struct Options {
+        fileprivate var decodingStrategies = DecodingStrategies()
+    }
+
+    fileprivate var options = Options()
 }
 
 struct _Decoder: Decoder { // swiftlint:disable:this type_name
 
     private let object: Any
 
-    init(referencing object: Any, userInfo: [CodingUserInfoKey: Any], codingPath: [CodingKey] = []) {
+    fileprivate typealias Options = ObjectDecoder.Options
+    private let options: Options
+
+    fileprivate init(_ object: Any,
+                     _ options: Options,
+                     _ userInfo: [CodingUserInfoKey: Any],
+                     _ codingPath: [CodingKey] = []) {
         self.object = object
+        self.options = options
         self.userInfo = userInfo
         self.codingPath = codingPath
     }
@@ -52,16 +102,20 @@ struct _Decoder: Decoder { // swiftlint:disable:this type_name
 
     // MARK: -
 
-    fileprivate func cast<T>(_ object: Any) throws -> T {
-        guard let value = object as? T else {
-            throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
+    fileprivate func cast<T: Decodable>(_ object: Any) throws -> T {
+        if let strategy = options.decodingStrategies[T.self] {
+            return try strategy.closure(self)
+        } else {
+            guard let value = object as? T else {
+                throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
+            }
+            return value
         }
-        return value
     }
 
     /// create a new `_Decoder` instance referencing `object` as `key` inheriting `userInfo`
     fileprivate func decoder(referencing object: Any, `as` key: CodingKey) -> _Decoder {
-        return .init(referencing: object, userInfo: userInfo, codingPath: codingPath + [key])
+        return .init(object, options, userInfo, codingPath + [key])
     }
 }
 
@@ -103,7 +157,7 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
     func decode(_ type: String.Type, forKey key: Key) throws -> String { return try unbox(for: key) }
 
     func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T: Decodable {
-        return try T(from: decoder(for: key))
+        return try decoder(for: key).decode(T.self)
     }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type,
@@ -181,7 +235,7 @@ struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disabl
 
     mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
         try throwErrorIfAtEnd(type)
-        let value = try T(from: currentDecoder)
+        let value = try currentDecoder.decode(T.self)
         currentIndex += 1
         return value
     }
@@ -243,10 +297,21 @@ extension _Decoder: SingleValueDecodingContainer {
     func decode(_ type: Float.Type)  throws -> Float { return try cast(object) }
     func decode(_ type: Double.Type) throws -> Double { return try cast(object) }
     func decode(_ type: String.Type) throws -> String { return try cast(object) }
-    func decode<T>(_ type: T.Type)   throws -> T where T: Decodable { return try T(from: self) }
+    func decode<T>(_ type: T.Type)   throws -> T where T: Decodable {
+        if let strategy = options.decodingStrategies[type] {
+            return try strategy.closure(self)
+        } else {
+            return try T(from: self)
+        }
+    }
 }
 
 // MARK: - DecodingError helpers
+
+private func _dataCorrupted(at codingPath: [CodingKey], _ description: String, _ error: Error? = nil) -> DecodingError {
+    let context = DecodingError.Context(codingPath: codingPath, debugDescription: description, underlyingError: error)
+    return .dataCorrupted(context)
+}
 
 private func _keyNotFound(at codingPath: [CodingKey], _ key: CodingKey, _ description: String) -> DecodingError {
     let context = DecodingError.Context(codingPath: codingPath, debugDescription: description)
@@ -262,4 +327,70 @@ private func _typeMismatch(at codingPath: [CodingKey], expectation: Any.Type, re
     let description = "Expected to decode \(expectation) but found \(type(of: reality)) instead."
     let context = DecodingError.Context(codingPath: codingPath, debugDescription: description)
     return .typeMismatch(expectation, context)
+}
+
+// MARK: - ObjectDecoder.DecodingStrategy
+
+extension ObjectDecoder {
+    /// The strategy to use for decoding `Data` values.
+    public typealias DataDecodingStrategy = DecodingStrategy<Data>
+    /// The strategy to use for decoding `Date` values.
+    public typealias DateDecodingStrategy = DecodingStrategy<Date>
+}
+
+extension ObjectDecoder.DecodingStrategy {
+    /// Decode the `T` as a custom value decoded by the given closure.
+    public static func custom(_ closure: @escaping (Decoder) throws -> T) -> ObjectDecoder.DecodingStrategy<T> {
+        return .init(closure: closure)
+    }
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Data {
+    /// Defer to `Data` for decoding.
+    public static let deferredToData = ObjectDecoder.DecodingStrategy<Data>([Data.self, NSData.self]) {
+        try Data(from: $0)
+    }
+
+    /// Decode the `Data` from a Base64-encoded string. This is the default strategy.
+    public static let base64 = ObjectDecoder.DecodingStrategy<Data>([Data.self, NSData.self]) {
+        guard let data = Data(base64Encoded: try String(from: $0)) else {
+            throw _dataCorrupted(at: $0.codingPath, "Encountered Data is not valid Base64.")
+        }
+        return data
+    }
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Date {
+    /// Defer to `Date` for decoding.
+    public static let deferredToDate = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+        try Date(from: $0)
+    }
+
+    /// Decode the `Date` as a UNIX timestamp from a `Double`.
+    public static let secondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+        Date(timeIntervalSince1970: try Double(from: $0))
+    }
+
+    /// Decode the `Date` as UNIX millisecond timestamp from a `Double`.
+    public static let millisecondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+        Date(timeIntervalSince1970: try Double(from: $0) / 1000.0)
+    }
+    /// Decode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
+    @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
+    public static let iso8601 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+        guard let date = iso8601Formatter.date(from: try String(from: $0)) else {
+            throw _dataCorrupted(at: $0.codingPath, "Expected date string to be ISO8601-formatted.")
+        }
+        return date
+    }
+
+    /// Decode the `Date` as a string parsed by the given formatter.
+    public static func formatted(_ formatter: DateFormatter) -> ObjectDecoder.DecodingStrategy<Date> {
+        return ObjectDecoder.DecodingStrategy([Date.self, NSDate.self]) {
+            guard let date = formatter.date(from: try String(from: $0)) else {
+                throw _dataCorrupted(at: $0.codingPath, "Date string does not match format expected by formatter.")
+            }
+            return date
+        }
+    }
 }
