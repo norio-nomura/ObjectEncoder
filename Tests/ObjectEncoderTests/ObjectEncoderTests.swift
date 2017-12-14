@@ -55,18 +55,25 @@ class ObjectEncoderTests: XCTestCase {
     // MARK: - Date Strategy Tests
     func testEncodingDate() {
         _testRoundTrip(of: Date())
+    }
 
+    func testEncodingDateSecondsSince1970() {
         // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
         _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
                        expectedObject: 1000.0,
                        dateEncodingStrategy: .secondsSince1970,
                        dateDecodingStrategy: .secondsSince1970)
+    }
+
+    func testEncodingDateMillisecondsSince1970() {
         // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
         _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
                        expectedObject: 1000000.0,
                        dateEncodingStrategy: .millisecondsSince1970,
                        dateDecodingStrategy: .millisecondsSince1970)
+    }
 
+    func testEncodingDateISO8601() {
         if #available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *) {
             // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
             _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
@@ -74,7 +81,9 @@ class ObjectEncoderTests: XCTestCase {
                            dateEncodingStrategy: .iso8601,
                            dateDecodingStrategy: .iso8601)
         }
+    }
 
+    func testEncodingDateFormatted() {
         let formatter = DateFormatter()
         formatter.dateStyle = .full
         formatter.timeStyle = .full
@@ -85,7 +94,9 @@ class ObjectEncoderTests: XCTestCase {
                        expectedObject: "Thursday, January 1, 1970 at 12:16:40 AM Greenwich Mean Time",
                        dateEncodingStrategy: .formatted(formatter),
                        dateDecodingStrategy: .formatted(formatter))
+    }
 
+    func testEncodingDateCustom() {
         let timestamp = Date()
         // We'll encode a number instead of a date.
         let encodeNumber = { (_ data: Date, _ encoder: Encoder) throws -> Void in
@@ -97,7 +108,10 @@ class ObjectEncoderTests: XCTestCase {
                        expectedObject: 42,
                        dateEncodingStrategy: .custom(encodeNumber),
                        dateDecodingStrategy: .custom(decodeNumber))
+    }
 
+    func testEncodingDateCustomEmpty() {
+        let timestamp = Date()
         // Encoding nothing should encode an empty keyed container ({}).
         let encodeEmpty = { (_: Date, _: Encoder) throws -> Void in }
         let decodeEmpty = { (_: Decoder) throws -> Date in return timestamp }
@@ -126,8 +140,8 @@ class ObjectEncoderTests: XCTestCase {
 
     private func _testRoundTrip<T>(of object: T,
                                    expectedObject: Any? = nil,
-                                   dateEncodingStrategy: ObjectEncoder.DateEncodingStrategy = .deferredToDate,
-                                   dateDecodingStrategy: ObjectDecoder.DateDecodingStrategy = .deferredToDate,
+                                   dateEncodingStrategy: ObjectEncoder.DateEncodingStrategy? = nil,
+                                   dateDecodingStrategy: ObjectDecoder.DateDecodingStrategy? = nil,
                                    file: StaticString = #file,
                                    line: UInt = #line) where T: Codable, T: Equatable {
         do {
@@ -158,7 +172,13 @@ class ObjectEncoderTests: XCTestCase {
         ("testValuesInUnkeyedContainer", testValuesInUnkeyedContainer),
         ("testNestedContainerCodingPaths", testNestedContainerCodingPaths),
         ("testSuperEncoderCodingPaths", testSuperEncoderCodingPaths),
-        ("testEncodingDate", testEncodingDate)
+        ("testEncodingDate", testEncodingDate),
+        ("testEncodingDateSecondsSince1970", testEncodingDateSecondsSince1970),
+        ("testEncodingDateMillisecondsSince1970", testEncodingDateMillisecondsSince1970),
+        ("testEncodingDateISO8601", testEncodingDateISO8601),
+        ("testEncodingDateFormatted", testEncodingDateFormatted),
+        ("testEncodingDateCustom", testEncodingDateCustom),
+        ("testEncodingDateCustomEmpty", testEncodingDateCustomEmpty),
     ]
 }
 
