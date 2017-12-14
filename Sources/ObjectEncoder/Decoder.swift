@@ -25,7 +25,7 @@ public struct ObjectDecoder {
     public struct DecodingStrategy<T: Decodable> {
         fileprivate let identifiers: [ObjectIdentifier]
         fileprivate let closure: (Decoder) throws -> T
-        init(_ types: [Any.Type] = [T.self], closure: @escaping (Decoder) throws -> T) {
+        public init(_ types: [Any.Type] = [T.self], closure: @escaping (Decoder) throws -> T) {
             self.closure = closure
             self.identifiers = types.map(ObjectIdentifier.init)
         }

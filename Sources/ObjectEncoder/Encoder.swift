@@ -30,7 +30,7 @@ public struct ObjectEncoder {
     public struct EncodingStrategy<T: Encodable> {
         fileprivate let identifiers: [ObjectIdentifier]
         fileprivate let closure: (T, Encoder) throws -> Void
-        init(_ types: [Any.Type] = [T.self], closure: @escaping (T, Encoder) throws -> Void) {
+        public init(_ types: [Any.Type] = [T.self], closure: @escaping (T, Encoder) throws -> Void) {
             self.closure = closure
             self.identifiers = types.map(ObjectIdentifier.init)
         }
