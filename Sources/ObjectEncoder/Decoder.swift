@@ -23,12 +23,14 @@ public struct ObjectDecoder {
     }
 
     public struct DecodingStrategy<T: Decodable> {
-        fileprivate let identifiers: [ObjectIdentifier]
-        fileprivate let closure: (Decoder) throws -> T
-        public init(_ types: [Any.Type] = [T.self], closure: @escaping (Decoder) throws -> T) {
+        public typealias Closure = (Decoder) throws -> T
+        public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
+            self.identifiers = identifiers
             self.closure = closure
-            self.identifiers = types.map(ObjectIdentifier.init)
         }
+
+        fileprivate let identifiers: [ObjectIdentifier]
+        fileprivate let closure: Closure
     }
 
     public struct DecodingStrategies {
@@ -340,40 +342,48 @@ extension ObjectDecoder {
 
 extension ObjectDecoder.DecodingStrategy {
     /// Decode the `T` as a custom value decoded by the given closure.
-    public static func custom(_ closure: @escaping (Decoder) throws -> T) -> ObjectDecoder.DecodingStrategy<T> {
-        return .init(closure: closure)
+    public static func custom(_ types: [Any.Type] = [T.self],
+                              _ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<T> {
+        return .init(identifiers: types.map(ObjectIdentifier.init), closure: closure)
     }
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Data {
     /// Defer to `Data` for decoding.
-    public static let deferredToData: ObjectDecoder.DecodingStrategy<Data>? = nil
+    public static let deferredToData: ObjectDecoder.DataDecodingStrategy? = nil
 
     /// Decode the `Data` from a Base64-encoded string. This is the default strategy.
-    public static let base64 = ObjectDecoder.DecodingStrategy<Data>([Data.self, NSData.self]) {
+    public static let base64 = ObjectDecoder.DataDecodingStrategy.custom {
         guard let data = Data(base64Encoded: try String(from: $0)) else {
             throw _dataCorrupted(at: $0.codingPath, "Encountered Data is not valid Base64.")
         }
         return data
     }
+
+    /// Decode the `Data` as a custom value decoded by the given closure.
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DataDecodingStrategy {
+        return .init(identifiers: ObjectDecoder.DataDecodingStrategy.identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Data.self, NSData.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Date {
     /// Defer to `Date` for decoding.
-    public static let deferredToDate: ObjectDecoder.DecodingStrategy<Date>? = nil
+    public static let deferredToDate: ObjectDecoder.DateDecodingStrategy? = nil
 
     /// Decode the `Date` as a UNIX timestamp from a `Double`.
-    public static let secondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+    public static let secondsSince1970 = ObjectDecoder.DateDecodingStrategy.custom {
         Date(timeIntervalSince1970: try Double(from: $0))
     }
 
     /// Decode the `Date` as UNIX millisecond timestamp from a `Double`.
-    public static let millisecondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+    public static let millisecondsSince1970 = ObjectDecoder.DateDecodingStrategy.custom {
         Date(timeIntervalSince1970: try Double(from: $0) / 1000.0)
     }
     /// Decode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
     @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-    public static let iso8601 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
+    public static let iso8601 = ObjectDecoder.DateDecodingStrategy.custom {
         guard let date = iso8601Formatter.date(from: try String(from: $0)) else {
             throw _dataCorrupted(at: $0.codingPath, "Expected date string to be ISO8601-formatted.")
         }
@@ -381,12 +391,19 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
     }
 
     /// Decode the `Date` as a string parsed by the given formatter.
-    public static func formatted(_ formatter: DateFormatter) -> ObjectDecoder.DecodingStrategy<Date> {
-        return ObjectDecoder.DecodingStrategy([Date.self, NSDate.self]) {
+    public static func formatted(_ formatter: DateFormatter) -> ObjectDecoder.DateDecodingStrategy {
+        return .custom {
             guard let date = formatter.date(from: try String(from: $0)) else {
                 throw _dataCorrupted(at: $0.codingPath, "Date string does not match format expected by formatter.")
             }
             return date
         }
     }
-}
+
+    /// Decode the `Date` as a custom value decoded by the given closure.
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DateDecodingStrategy {
+        return .init(identifiers: ObjectDecoder.DateDecodingStrategy.identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Date.self, NSDate.self].map(ObjectIdentifier.init)
+} // swiftlint:disable:this file_length

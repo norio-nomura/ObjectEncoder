@@ -28,12 +28,14 @@ public struct ObjectEncoder {
     }
 
     public struct EncodingStrategy<T: Encodable> {
-        fileprivate let identifiers: [ObjectIdentifier]
-        fileprivate let closure: (T, Encoder) throws -> Void
-        public init(_ types: [Any.Type] = [T.self], closure: @escaping (T, Encoder) throws -> Void) {
+        public typealias Closure = (T, Encoder) throws -> Void
+        public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
+            self.identifiers = identifiers
             self.closure = closure
-            self.identifiers = types.map(ObjectIdentifier.init)
         }
+
+        fileprivate let identifiers: [ObjectIdentifier]
+        fileprivate let closure: Closure
     }
 
     public struct EncodingStrategies {
@@ -367,19 +369,30 @@ extension ObjectEncoder.EncodingStrategy {
     ///
     /// If the closure fails to encode a value into the given encoder,
     /// the encoder will encode an empty automatic container in its place.
-    public static func custom(_ closure: @escaping (T, Encoder) throws -> Void) -> ObjectEncoder.EncodingStrategy<T> {
-        return .init(closure: closure)
+    public static func custom(_ types: [Any.Type] = [T.self],
+                              _ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<T> {
+        return .init(identifiers: types.map(ObjectIdentifier.init), closure: closure)
     }
 }
 
 extension ObjectEncoder.EncodingStrategy where T == Data {
     /// Defer to `Data` for choosing an encoding.
-    public static let deferredToData: ObjectEncoder.EncodingStrategy<Data>? = nil
+    public static let deferredToData: ObjectEncoder.DataEncodingStrategy? = nil
 
     /// Encoded the `Data` as a Base64-encoded string. This is the default strategy.
-    public static let base64 = ObjectEncoder.EncodingStrategy<Data>([Data.self, NSData.self]) {
+    public static let base64 = ObjectEncoder.DataEncodingStrategy.custom {
         try $0.base64EncodedString().encode(to: $1)
     }
+
+    /// Encode the `Data` as a custom value encoded by the given closure.
+    ///
+    /// If the closure fails to encode a value into the given encoder,
+    /// the encoder will encode an empty automatic container in its place.
+    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DataEncodingStrategy {
+        return .init(identifiers: ObjectEncoder.DataEncodingStrategy.identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Data.self, NSData.self].map(ObjectIdentifier.init)
 }
 
 @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
@@ -391,32 +404,42 @@ var iso8601Formatter: ISO8601DateFormatter = {
 
 extension ObjectEncoder.EncodingStrategy where T == Date {
     /// Defer to `Date` for choosing an encoding. This is the default strategy.
-    public static let deferredToDate: ObjectEncoder.EncodingStrategy<Date>? = nil
+    public static let deferredToDate: ObjectEncoder.DateEncodingStrategy? = nil
 
     /// Encode the `Date` as a UNIX timestamp (as a `Double`).
-    public static let secondsSince1970 = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) {
+    public static let secondsSince1970 = ObjectEncoder.DateEncodingStrategy.custom {
         var container = $1.singleValueContainer()
         try container.encode($0.timeIntervalSince1970)
     }
 
     /// Encode the `Date` as UNIX millisecond timestamp (as a `Double`).
-    public static let millisecondsSince1970 = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) {
+    public static let millisecondsSince1970 = ObjectEncoder.DateEncodingStrategy.custom {
         var container = $1.singleValueContainer()
         try container.encode(1000.0 * $0.timeIntervalSince1970)
     }
 
     /// Encode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
     @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-    public static let iso8601 = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) {
+    public static let iso8601 = ObjectEncoder.DateEncodingStrategy.custom {
         var container = $1.singleValueContainer()
         try container.encode(iso8601Formatter.string(from: $0))
     }
 
     /// Encode the `Date` as a string formatted by the given formatter.
-    public static func formatted(_ formatter: DateFormatter) -> ObjectEncoder.EncodingStrategy<Date> {
-        return ObjectEncoder.EncodingStrategy([Date.self, NSDate.self]) {
+    public static func formatted(_ formatter: DateFormatter) -> ObjectEncoder.DateEncodingStrategy {
+        return .custom {
             var container = $1.singleValueContainer()
             try container.encode(formatter.string(from: $0))
         }
     }
+
+    /// Encode the `Date` as a custom value encoded by the given closure.
+    ///
+    /// If the closure fails to encode a value into the given encoder,
+    /// the encoder will encode an empty automatic container in its place.
+    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DateEncodingStrategy {
+        return .init(identifiers: ObjectEncoder.DateEncodingStrategy.identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Date.self, NSDate.self].map(ObjectIdentifier.init)
 } // swiftlint:disable:this file_length
