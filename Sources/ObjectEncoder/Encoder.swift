@@ -374,9 +374,7 @@ extension ObjectEncoder.EncodingStrategy {
 
 extension ObjectEncoder.EncodingStrategy where T == Data {
     /// Defer to `Data` for choosing an encoding.
-    public static let deferredToData = ObjectEncoder.EncodingStrategy<Data>([Data.self, NSData.self]) {
-        try $0.encode(to: $1)
-    }
+    public static let deferredToData: ObjectEncoder.EncodingStrategy<Data>? = nil
 
     /// Encoded the `Data` as a Base64-encoded string. This is the default strategy.
     public static let base64 = ObjectEncoder.EncodingStrategy<Data>([Data.self, NSData.self]) {
@@ -393,9 +391,7 @@ var iso8601Formatter: ISO8601DateFormatter = {
 
 extension ObjectEncoder.EncodingStrategy where T == Date {
     /// Defer to `Date` for choosing an encoding. This is the default strategy.
-    public static let deferredToDate = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) {
-        try $0.encode(to: $1)
-    }
+    public static let deferredToDate: ObjectEncoder.EncodingStrategy<Date>? = nil
 
     /// Encode the `Date` as a UNIX timestamp (as a `Double`).
     public static let secondsSince1970 = ObjectEncoder.EncodingStrategy<Date>([Date.self, NSDate.self]) {

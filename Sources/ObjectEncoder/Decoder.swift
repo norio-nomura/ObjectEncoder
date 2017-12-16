@@ -347,9 +347,7 @@ extension ObjectDecoder.DecodingStrategy {
 
 extension ObjectDecoder.DecodingStrategy where T == Data {
     /// Defer to `Data` for decoding.
-    public static let deferredToData = ObjectDecoder.DecodingStrategy<Data>([Data.self, NSData.self]) {
-        try Data(from: $0)
-    }
+    public static let deferredToData: ObjectDecoder.DecodingStrategy<Data>? = nil
 
     /// Decode the `Data` from a Base64-encoded string. This is the default strategy.
     public static let base64 = ObjectDecoder.DecodingStrategy<Data>([Data.self, NSData.self]) {
@@ -362,9 +360,7 @@ extension ObjectDecoder.DecodingStrategy where T == Data {
 
 extension ObjectDecoder.DecodingStrategy where T == Date {
     /// Defer to `Date` for decoding.
-    public static let deferredToDate = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
-        try Date(from: $0)
-    }
+    public static let deferredToDate: ObjectDecoder.DecodingStrategy<Date>? = nil
 
     /// Decode the `Date` as a UNIX timestamp from a `Double`.
     public static let secondsSince1970 = ObjectDecoder.DecodingStrategy<Date>([Date.self, NSDate.self]) {
