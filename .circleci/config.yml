@@ -10,6 +10,7 @@ aliases:
     - store_test_results:
         path: build/reports/
     - run: swift test
+    - run: bash <(curl -s https://codecov.io/bash)
 
   - &steps-for-linux
     - checkout
