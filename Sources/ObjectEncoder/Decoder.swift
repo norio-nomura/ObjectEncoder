@@ -140,7 +140,13 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
     // MARK: - Swift.KeyedDecodingContainerProtocol Methods
 
     var codingPath: [CodingKey] { return decoder.codingPath }
-    var allKeys: [Key] { return dictionary.keys.flatMap(Key.init) }
+    var allKeys: [Key] {
+        #if swift(>=4.1)
+            return dictionary.keys.compactMap(Key.init)
+        #else
+            return dictionary.keys.flatMap(Key.init)
+        #endif
+    }
     func contains(_ key: Key) -> Bool { return dictionary[key.stringValue] != nil }
 
     func decodeNil(forKey key: Key) throws -> Bool {
