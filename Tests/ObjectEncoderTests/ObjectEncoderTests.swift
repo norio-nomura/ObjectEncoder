@@ -1,5 +1,5 @@
 import XCTest
-@testable import ObjectEncoder
+import ObjectEncoder
 
 // swiftlint:disable identifier_name
 

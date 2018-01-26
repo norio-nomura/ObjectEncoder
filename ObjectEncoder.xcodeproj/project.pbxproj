@@ -359,7 +359,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				ENABLE_TESTABILITY = YES;
 				INFOPLIST_FILE = ObjectEncoder.xcodeproj/ObjectEncoder_Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = ObjectEncoder;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -373,7 +372,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				ENABLE_TESTABILITY = YES;
 				INFOPLIST_FILE = ObjectEncoder.xcodeproj/ObjectEncoder_Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = ObjectEncoder;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
