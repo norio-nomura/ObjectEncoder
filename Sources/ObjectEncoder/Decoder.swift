@@ -104,15 +104,19 @@ struct _Decoder: Decoder { // swiftlint:disable:this type_name
 
     // MARK: -
 
-    fileprivate func cast<T: Decodable>(_ object: Any) throws -> T {
+    fileprivate func unbox<T: Decodable>(_ object: Any) throws -> T {
         if let strategy = options.decodingStrategies[T.self] {
             return try strategy.closure(self)
         } else {
-            guard let value = object as? T else {
-                throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
-            }
-            return value
+            return try cast(object)
         }
+    }
+
+    private func cast<T>(_ object: Any) throws -> T {
+        guard let value = object as? T else {
+            throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
+        }
+        return value
     }
 
     /// create a new `_Decoder` instance referencing `object` as `key` inheriting `userInfo`
@@ -136,7 +140,13 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
     // MARK: - Swift.KeyedDecodingContainerProtocol Methods
 
     var codingPath: [CodingKey] { return decoder.codingPath }
-    var allKeys: [Key] { return dictionary.keys.flatMap(Key.init) }
+    var allKeys: [Key] {
+        #if swift(>=4.1)
+            return dictionary.keys.compactMap(Key.init)
+        #else
+            return dictionary.keys.flatMap(Key.init)
+        #endif
+    }
     func contains(_ key: Key) -> Bool { return dictionary[key.stringValue] != nil }
 
     func decodeNil(forKey key: Key) throws -> Bool {
@@ -188,7 +198,7 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
     }
 
     private func unbox<T: Decodable>(for key: Key) throws -> T {
-        return try decoder(for: key).cast(object(for: key))
+        return try decoder(for: key).unbox(object(for: key))
     }
 }
 
@@ -274,7 +284,7 @@ struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disabl
 
     private mutating func unbox<T: Decodable>() throws -> T {
         try throwErrorIfAtEnd(T.self)
-        let decoded: T = try currentDecoder.cast(currentObject)
+        let decoded: T = try currentDecoder.unbox(currentObject)
         currentIndex += 1
         return decoded
     }
@@ -285,20 +295,20 @@ extension _Decoder: SingleValueDecodingContainer {
     // MARK: - Swift.SingleValueDecodingContainer Methods
 
     func decodeNil() -> Bool { return object is NSNull }
-    func decode(_ type: Bool.Type)   throws -> Bool { return try cast(object) }
-    func decode(_ type: Int.Type)    throws -> Int { return try cast(object) }
-    func decode(_ type: Int8.Type)   throws -> Int8 { return try cast(object) }
-    func decode(_ type: Int16.Type)  throws -> Int16 { return try cast(object) }
-    func decode(_ type: Int32.Type)  throws -> Int32 { return try cast(object) }
-    func decode(_ type: Int64.Type)  throws -> Int64 { return try cast(object) }
-    func decode(_ type: UInt.Type)   throws -> UInt { return try cast(object) }
-    func decode(_ type: UInt8.Type)  throws -> UInt8 { return try cast(object) }
-    func decode(_ type: UInt16.Type) throws -> UInt16 { return try cast(object) }
-    func decode(_ type: UInt32.Type) throws -> UInt32 { return try cast(object) }
-    func decode(_ type: UInt64.Type) throws -> UInt64 { return try cast(object) }
-    func decode(_ type: Float.Type)  throws -> Float { return try cast(object) }
-    func decode(_ type: Double.Type) throws -> Double { return try cast(object) }
-    func decode(_ type: String.Type) throws -> String { return try cast(object) }
+    func decode(_ type: Bool.Type)   throws -> Bool { return try unbox(object) }
+    func decode(_ type: Int.Type)    throws -> Int { return try unbox(object) }
+    func decode(_ type: Int8.Type)   throws -> Int8 { return try unbox(object) }
+    func decode(_ type: Int16.Type)  throws -> Int16 { return try unbox(object) }
+    func decode(_ type: Int32.Type)  throws -> Int32 { return try unbox(object) }
+    func decode(_ type: Int64.Type)  throws -> Int64 { return try unbox(object) }
+    func decode(_ type: UInt.Type)   throws -> UInt { return try unbox(object) }
+    func decode(_ type: UInt8.Type)  throws -> UInt8 { return try unbox(object) }
+    func decode(_ type: UInt16.Type) throws -> UInt16 { return try unbox(object) }
+    func decode(_ type: UInt32.Type) throws -> UInt32 { return try unbox(object) }
+    func decode(_ type: UInt64.Type) throws -> UInt64 { return try unbox(object) }
+    func decode(_ type: Float.Type)  throws -> Float { return try unbox(object) }
+    func decode(_ type: Double.Type) throws -> Double { return try unbox(object) }
+    func decode(_ type: String.Type) throws -> String { return try unbox(object) }
     func decode<T>(_ type: T.Type)   throws -> T where T: Decodable {
         if let strategy = options.decodingStrategies[type] {
             return try strategy.closure(self)
