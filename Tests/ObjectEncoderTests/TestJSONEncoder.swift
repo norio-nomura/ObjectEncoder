@@ -12,6 +12,10 @@
 
 // import Swift
 import Foundation
+import ObjectEncoder
+
+private typealias JSONEncoder = JSONObjectEncoder
+private typealias JSONDecoder = JSONObjectDecoder
 
 // swiftlint:disable line_length
 // swiftlint:disable colon comma file_length force_try function_body_length identifier_name  operator_whitespace private_over_fileprivate redundant_discardable_let todo trailing_whitespace type_body_length unneeded_break_in_switch vertical_whitespace

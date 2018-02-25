@@ -72,7 +72,7 @@ public struct ObjectDecoder {
 
 struct _Decoder: Decoder { // swiftlint:disable:this type_name
 
-    private let object: Any
+    let object: Any
 
     fileprivate typealias Options = ObjectDecoder.Options
     private let options: Options
@@ -320,7 +320,8 @@ extension _Decoder: SingleValueDecodingContainer {
 
 // MARK: - DecodingError helpers
 
-private func _dataCorrupted(at codingPath: [CodingKey], _ description: String, _ error: Error? = nil) -> DecodingError {
+// swiftlint:disable:next identifier_name
+func _dataCorrupted(at codingPath: [CodingKey], _ description: String, _ error: Error? = nil) -> DecodingError {
     let context = DecodingError.Context(codingPath: codingPath, debugDescription: description, underlyingError: error)
     return .dataCorrupted(context)
 }
@@ -348,6 +349,11 @@ extension ObjectDecoder {
     public typealias DataDecodingStrategy = DecodingStrategy<Data>
     /// The strategy to use for decoding `Date` values.
     public typealias DateDecodingStrategy = DecodingStrategy<Date>
+
+    /// The strategy to use for decoding `Double` values.
+    public typealias DoubleDecodingStrategy = DecodingStrategy<Double>
+    /// The strategy to use for decoding `Float` values.
+    public typealias FloatDecodingStrategy = DecodingStrategy<Float>
 }
 
 extension ObjectDecoder.DecodingStrategy {
@@ -372,7 +378,7 @@ extension ObjectDecoder.DecodingStrategy where T == Data {
 
     /// Decode the `Data` as a custom value decoded by the given closure.
     public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DataDecodingStrategy {
-        return .init(identifiers: ObjectDecoder.DataDecodingStrategy.identifiers, closure: closure)
+        return .init(identifiers: identifiers, closure: closure)
     }
 
     private static let identifiers = [Data.self, NSData.self].map(ObjectIdentifier.init)
@@ -412,8 +418,108 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
 
     /// Decode the `Date` as a custom value decoded by the given closure.
     public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DateDecodingStrategy {
-        return .init(identifiers: ObjectDecoder.DateDecodingStrategy.identifiers, closure: closure)
+        return .init(identifiers: identifiers, closure: closure)
     }
 
     private static let identifiers = [Date.self, NSDate.self].map(ObjectIdentifier.init)
-} // swiftlint:disable:this file_length
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Decimal {
+    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<Decimal>.custom {
+        guard let decoder = $0 as? _Decoder else {
+            fatalError("unreachable")
+        }
+        if let decimal = decoder.object as? Decimal {
+            return decimal
+        } else {
+            return Decimal(try Double(from: decoder))
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<Decimal> {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Decimal.self, NSDecimalNumber.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Double {
+    public static let deferredToDouble: ObjectDecoder.DoubleDecodingStrategy? = nil
+
+    public static func convertNonConformingFloatFromString(_ positiveInfinity: String,
+                                                           _ negativeInfinity: String,
+                                                           _ nan: String) -> ObjectDecoder.DoubleDecodingStrategy {
+        return .custom {
+            guard let decoder = $0 as? _Decoder else {
+                fatalError("unreachable")
+            }
+            if let double = decoder.object as? Double {
+                return double
+            } else if let string = decoder.object as? String {
+                if string == positiveInfinity {
+                    return .infinity
+                } else if string == negativeInfinity {
+                    return -.infinity
+                } else if string == nan {
+                    return .nan
+                }
+            }
+            throw _typeMismatch(at: decoder.codingPath, expectation: Double.self, reality: decoder.object)
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DoubleDecodingStrategy {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Double.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Float {
+    public static let deferredToFloat: ObjectDecoder.FloatDecodingStrategy? = nil
+
+    public static func convertNonConformingFloatFromString(_ positiveInfinity: String,
+                                                           _ negativeInfinity: String,
+                                                           _ nan: String) -> ObjectDecoder.FloatDecodingStrategy {
+        return .custom {
+            guard let decoder = $0 as? _Decoder else {
+                fatalError("unreachable")
+            }
+            if let float = decoder.object as? Float {
+                return float
+            } else if let string = decoder.object as? String {
+                if string == positiveInfinity {
+                    return .infinity
+                } else if string == negativeInfinity {
+                    return -.infinity
+                } else if string == nan {
+                    return .nan
+                }
+            }
+            throw _typeMismatch(at: decoder.codingPath, expectation: Float.self, reality: decoder.object)
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.FloatDecodingStrategy {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Float.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectDecoder.DecodingStrategy where T == URL {
+    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<URL>.custom {
+        guard let url = URL(string: try String(from: $0)) else {
+            throw _dataCorrupted(at: $0.codingPath, "Invalid URL string.")
+        }
+        return url
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<URL> {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [URL.self, NSURL.self].map(ObjectIdentifier.init)
+}
+
+// swiftlint:disable:this file_length
