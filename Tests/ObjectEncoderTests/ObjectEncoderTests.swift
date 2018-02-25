@@ -166,6 +166,24 @@ class ObjectEncoderTests: XCTestCase {
                        dataDecodingStrategy: .custom(decode))
     }
 
+    func testDecodingConcreteTypeParameter() {
+
+        let encoder = ObjectEncoder()
+        guard let json = try? encoder.encode(Employee.testValue) else {
+            XCTFail("Unable to encode Employee.")
+            return
+        }
+
+        let decoder = ObjectDecoder()
+        guard let decoded = try? decoder.decode(Employee.self as Person.Type, from: json) else {
+            XCTFail("Failed to decode Employee as Person from Any.")
+            return
+        }
+
+        XCTAssertTrue(type(of: decoded) == Employee.self,
+                      "Expected decoded value to be of type Employee; got \(type(of: decoded)) instead.")
+    }
+
     // MARK: -
 
     private func _testFixedWidthInteger<T>(type: T.Type,
@@ -232,11 +250,12 @@ class ObjectEncoderTests: XCTestCase {
         ("testEncodingData", testEncodingData),
         ("testEncodingDataBase64", testEncodingDataBase64),
         ("testEncodingDataCustom", testEncodingDataCustom),
-        ("testEncodingDataCustomEmpty", testEncodingDataCustomEmpty)
+        ("testEncodingDataCustomEmpty", testEncodingDataCustomEmpty),
+        ("testDecodingConcreteTypeParameter", testDecodingConcreteTypeParameter)
     ]
 }
 
-struct KeyedSynthesized: Codable, Equatable {
+private struct KeyedSynthesized: Codable, Equatable {
     static func == (lhs: KeyedSynthesized, rhs: KeyedSynthesized) -> Bool {
         return lhs.bool == rhs.bool &&
             lhs.int == rhs.int && lhs.int8 == rhs.int8 &&  lhs.int16 == rhs.int16 &&
@@ -266,7 +285,7 @@ struct KeyedSynthesized: Codable, Equatable {
     let url: URL
 }
 
-struct Unkeyed: Codable, Equatable {
+private struct Unkeyed: Codable, Equatable {
     static func == (lhs: Unkeyed, rhs: Unkeyed) -> Bool {
         return lhs.bool == rhs.bool &&
             lhs.int == rhs.int && lhs.int8 == rhs.int8 &&  lhs.int16 == rhs.int16 &&
@@ -415,7 +434,7 @@ private struct _TestKey: CodingKey {
     static let `super` = _TestKey(stringValue: "super")!
 }
 
-struct NestedContainersTestType: Codable, Equatable {
+private struct NestedContainersTestType: Codable, Equatable {
     let testSuperCoder: Bool
 
     static func == (lhs: NestedContainersTestType, rhs: NestedContainersTestType) -> Bool {
@@ -583,4 +602,92 @@ struct NestedContainersTestType: Codable, Equatable {
             expectEqualPaths(thirdLevelContainerUnkeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 1)], "New third-level unkeyed container had unexpected codingPath.")
         }
     }
-} // swiftlint:disable:this file_length
+}
+
+/// A simple person class that encodes as a dictionary of values.
+private class Person: Codable, Equatable {
+    let name: String
+    let email: String
+    let website: URL?
+
+    init(name: String, email: String, website: URL? = nil) {
+        self.name = name
+        self.email = email
+        self.website = website
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name
+        case email
+        case website
+    }
+
+    // FIXME: Remove when subclasses (Employee) are able to override synthesized conformance.
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        email = try container.decode(String.self, forKey: .email)
+        website = try container.decodeIfPresent(URL.self, forKey: .website)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(email, forKey: .email)
+        try container.encodeIfPresent(website, forKey: .website)
+    }
+
+    func isEqual(_ other: Person) -> Bool {
+        return self.name == other.name &&
+            self.email == other.email &&
+            self.website == other.website
+    }
+
+    static func == (_ lhs: Person, _ rhs: Person) -> Bool {
+        return lhs.isEqual(rhs)
+    }
+
+    class var testValue: Person {
+        return Person(name: "Johnny Appleseed", email: "appleseed@apple.com")
+    }
+}
+
+/// A class which shares its encoder and decoder with its superclass.
+private class Employee: Person {
+    let id: Int
+
+    init(name: String, email: String, website: URL? = nil, id: Int) {
+        self.id = id
+        super.init(name: name, email: email, website: website)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+    }
+
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        try super.init(from: decoder)
+    }
+
+    override func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try super.encode(to: encoder)
+    }
+
+    override func isEqual(_ other: Person) -> Bool {
+        if let employee = other as? Employee {
+            guard self.id == employee.id else { return false }
+        }
+
+        return super.isEqual(other)
+    }
+
+    override class var testValue: Employee {
+        return Employee(name: "Johnny Appleseed", email: "appleseed@apple.com", id: 42)
+    }
+}
+
+// swiftlint:disable:this file_length
