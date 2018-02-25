@@ -267,7 +267,7 @@ struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer { // swiftlint:disabl
     func encode<T>(_ value: T)   throws where T: Encodable { try currentEncoder.encode(value) }
 
     func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> {
-        return currentEncoder.container(keyedBy: NestedKey.self)
+        return currentEncoder.container(keyedBy: keyType)
     }
 
     func nestedUnkeyedContainer() -> UnkeyedEncodingContainer { return currentEncoder.unkeyedContainer() }

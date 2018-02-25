@@ -14,7 +14,7 @@ public struct ObjectDecoder {
                           from object: Any,
                           userInfo: [CodingUserInfoKey: Any] = [:]) throws -> T where T: Decodable {
         do {
-            return try _Decoder(object, options, userInfo).singleValueContainer().decode(T.self)
+            return try _Decoder(object, options, userInfo).singleValueContainer().decode(type)
         } catch let error as DecodingError {
             throw error
         } catch {
@@ -169,12 +169,12 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
     func decode(_ type: String.Type, forKey key: Key) throws -> String { return try unbox(for: key) }
 
     func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T: Decodable {
-        return try decoder(for: key).decode(T.self)
+        return try decoder(for: key).decode(type)
     }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type,
                                     forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
-        return try decoder(for: key).container(keyedBy: NestedKey.self)
+        return try decoder(for: key).container(keyedBy: type)
     }
 
     func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer {
@@ -247,7 +247,7 @@ struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disabl
 
     mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
         try throwErrorIfAtEnd(type)
-        let value = try currentDecoder.decode(T.self)
+        let value = try currentDecoder.decode(type)
         currentIndex += 1
         return value
     }
@@ -313,7 +313,7 @@ extension _Decoder: SingleValueDecodingContainer {
         if let strategy = options.decodingStrategies[type] {
             return try strategy.closure(self)
         } else {
-            return try T(from: self)
+            return try type.init(from: self)
         }
     }
 }
