@@ -622,7 +622,6 @@ private class Person: Codable, Equatable {
         case website
     }
 
-    // FIXME: Remove when subclasses (Employee) are able to override synthesized conformance.
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decode(String.self, forKey: .name)
