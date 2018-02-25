@@ -10,18 +10,21 @@
 // REQUIRES: executable_test
 // REQUIRES: objc_interop
 
-import Swift
+// import Swift
 import Foundation
+
+// swiftlint:disable line_length
+// swiftlint:disable colon comma file_length force_try function_body_length identifier_name  operator_whitespace private_over_fileprivate redundant_discardable_let todo trailing_whitespace type_body_length unneeded_break_in_switch vertical_whitespace
 
 // MARK: - Test Suite
 
-#if FOUNDATION_XCTEST
+//#if FOUNDATION_XCTEST
 import XCTest
 class TestJSONEncoderSuper : XCTestCase { }
-#else
-import StdlibUnittest
-class TestJSONEncoderSuper { }
-#endif
+//#else
+//import StdlibUnittest
+//class TestJSONEncoderSuper { }
+//#endif
 
 class TestJSONEncoder : TestJSONEncoderSuper {
   // MARK: - Encoding Top-Level Empty Types
@@ -152,11 +155,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateEncodingStrategy: .secondsSince1970,
                    dateDecodingStrategy: .secondsSince1970)
 
+#if swift(>=4.0.3)
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(Date(timeIntervalSince1970: seconds)),
                    expectedJSON: expectedJSON,
                    dateEncodingStrategy: .secondsSince1970,
                    dateDecodingStrategy: .secondsSince1970)
+#endif
   }
 
   func testEncodingDateMillisecondsSince1970() {
@@ -170,11 +175,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateEncodingStrategy: .millisecondsSince1970,
                    dateDecodingStrategy: .millisecondsSince1970)
 
+#if swift(>=4.0.3)
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(Date(timeIntervalSince1970: seconds)),
                    expectedJSON: expectedJSON,
                    dateEncodingStrategy: .millisecondsSince1970,
                    dateDecodingStrategy: .millisecondsSince1970)
+#endif
   }
 
   func testEncodingDateISO8601() {
@@ -192,11 +199,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                      dateDecodingStrategy: .iso8601)
 
 
+#if swift(>=4.0.3)
       // Optional dates should encode the same way.
       _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                      expectedJSON: expectedJSON,
                      dateEncodingStrategy: .iso8601,
                      dateDecodingStrategy: .iso8601)
+#endif
     }
   }
 
@@ -214,11 +223,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateEncodingStrategy: .formatted(formatter),
                    dateDecodingStrategy: .formatted(formatter))
 
+#if swift(>=4.0.3)
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                    expectedJSON: expectedJSON,
                    dateEncodingStrategy: .formatted(formatter),
                    dateDecodingStrategy: .formatted(formatter))
+#endif
   }
 
   func testEncodingDateCustom() {
@@ -238,11 +249,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateEncodingStrategy: .custom(encode),
                    dateDecodingStrategy: .custom(decode))
 
+#if swift(>=4.0.3)
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                    expectedJSON: expectedJSON,
                    dateEncodingStrategy: .custom(encode),
                    dateDecodingStrategy: .custom(decode))
+#endif
   }
 
   func testEncodingDateCustomEmpty() {
@@ -259,11 +272,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateEncodingStrategy: .custom(encode),
                    dateDecodingStrategy: .custom(decode))
 
+#if swift(>=4.0.3)
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                    expectedJSON: expectedJSON,
                    dateEncodingStrategy: .custom(encode),
                    dateDecodingStrategy: .custom(decode))
+#endif
   }
 
   // MARK: - Data Strategy Tests
@@ -291,8 +306,10 @@ class TestJSONEncoder : TestJSONEncoderSuper {
     let expectedJSON = "{\"value\":\"3q2+7w==\"}".data(using: .utf8)!
     _testRoundTrip(of: TopLevelWrapper(data), expectedJSON: expectedJSON)
 
+#if swift(>=4.0.3)
     // Optional data should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(data), expectedJSON: expectedJSON)
+#endif
   }
 
   func testEncodingDataCustom() {
@@ -310,11 +327,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dataEncodingStrategy: .custom(encode),
                    dataDecodingStrategy: .custom(decode))
 
+#if swift(>=4.0.3)
     // Optional data should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(Data()),
                    expectedJSON: expectedJSON,
                    dataEncodingStrategy: .custom(encode),
                    dataDecodingStrategy: .custom(decode))
+#endif
   }
 
   func testEncodingDataCustomEmpty() {
@@ -329,11 +348,13 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dataEncodingStrategy: .custom(encode),
                    dataDecodingStrategy: .custom(decode))
 
+#if swift(>=4.0.3)
     // Optional Data should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(Data()),
                    expectedJSON: expectedJSON,
                    dataEncodingStrategy: .custom(encode),
                    dataDecodingStrategy: .custom(decode))
+#endif
   }
 
   // MARK: - Non-Conforming Floating Point Strategy Tests
@@ -409,6 +430,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    nonConformingFloatDecodingStrategy: decodingStrategy)
   }
 
+/*
   // MARK: - Key Strategy Tests
   private struct EncodeMe : Encodable {
     var keyName: String
@@ -714,12 +736,14 @@ class TestJSONEncoder : TestJSONEncoderSuper {
     expectEqual("{\"oneTwo\":\"test2\"}", decodingResultString)
   }
 
+*/
+
   // MARK: - Encoder Features
   func testNestedContainerCodingPaths() {
     let encoder = JSONEncoder()
     do {
       let _ = try encoder.encode(NestedContainersTestType())
-    } catch let error as NSError {
+    } catch {
       expectUnreachable("Caught error during encoding nested container types: \(error)")
     }
   }
@@ -728,7 +752,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
     let encoder = JSONEncoder()
     do {
       let _ = try encoder.encode(NestedContainersTestType(testSuperEncoder: true))
-    } catch let error as NSError {
+    } catch {
       expectUnreachable("Caught error during encoding nested container types: \(error)")
     }
   }
@@ -741,8 +765,10 @@ class TestJSONEncoder : TestJSONEncoderSuper {
     let decimal = Decimal(sign: .plus, exponent: 127, significand: Decimal(1))
     _testRoundTrip(of: TopLevelWrapper(decimal), expectedJSON: expectedJSON)
 
+#if swift(>=4.0.3)
     // Optional Decimals should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(decimal), expectedJSON: expectedJSON)
+#endif
   }
 
   func testInterceptURL() {
@@ -751,8 +777,10 @@ class TestJSONEncoder : TestJSONEncoderSuper {
     let url = URL(string: "http://swift.org")!
     _testRoundTrip(of: TopLevelWrapper(url), expectedJSON: expectedJSON)
 
+#if swift(>=4.0.3)
     // Optional URLs should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(url), expectedJSON: expectedJSON)
+#endif
   }
     
   // MARK: - Type coercion
@@ -931,8 +959,8 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                                  dateDecodingStrategy: JSONDecoder.DateDecodingStrategy = .deferredToDate,
                                  dataEncodingStrategy: JSONEncoder.DataEncodingStrategy = .base64,
                                  dataDecodingStrategy: JSONDecoder.DataDecodingStrategy = .base64,
-                                 keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-                                 keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys,
+//                                 keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
+//                                 keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys,
                                  nonConformingFloatEncodingStrategy: JSONEncoder.NonConformingFloatEncodingStrategy = .throw,
                                  nonConformingFloatDecodingStrategy: JSONDecoder.NonConformingFloatDecodingStrategy = .throw) where T : Codable, T : Equatable {
     var payload: Data! = nil
@@ -942,7 +970,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
       encoder.dateEncodingStrategy = dateEncodingStrategy
       encoder.dataEncodingStrategy = dataEncodingStrategy
       encoder.nonConformingFloatEncodingStrategy = nonConformingFloatEncodingStrategy
-      encoder.keyEncodingStrategy = keyEncodingStrategy
+//      encoder.keyEncodingStrategy = keyEncodingStrategy
       payload = try encoder.encode(value)
     } catch {
       expectUnreachable("Failed to encode \(T.self) to JSON: \(error)")
@@ -957,7 +985,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
       decoder.dateDecodingStrategy = dateDecodingStrategy
       decoder.dataDecodingStrategy = dataDecodingStrategy
       decoder.nonConformingFloatDecodingStrategy = nonConformingFloatDecodingStrategy
-      decoder.keyDecodingStrategy = keyDecodingStrategy
+//      decoder.keyDecodingStrategy = keyDecodingStrategy
       let decoded = try decoder.decode(T.self, from: payload)
       expectEqual(decoded, value, "\(T.self) did not round-trip to an equal value.")
     } catch {
@@ -975,6 +1003,36 @@ class TestJSONEncoder : TestJSONEncoderSuper {
 }
 
 // MARK: - Helper Global Functions
+public func expectEqual<T: Equatable>(
+    _ expected: T, _ actual: T,
+    _ message: @autoclosure () -> String = "",
+    file: StaticString = #file, line: UInt = #line
+    ) {
+    XCTAssertEqual(expected, actual, message, file: file, line: line)
+}
+
+public func expectEqual(
+    _ expected: Any.Type, _ actual: Any.Type,
+    _ message: @autoclosure () -> String = "",
+    file: StaticString = #file, line: UInt = #line
+    ) {
+    XCTAssertTrue(expected == actual, message, file: file, line: line)
+}
+
+public func expectTrue(
+    _ actual: Bool,
+    _ message: @autoclosure () -> String = "",
+    file: StaticString = #file, line: UInt = #line
+    ) {
+    XCTAssertTrue(actual, message, file: file, line: line)
+}
+
+public func expectUnreachable(
+    _ message: @autoclosure () -> String = "",
+    file: StaticString = #file, line: UInt = #line) {
+    XCTFail("this code should not be executed: \(message())", file: file, line: line)
+}
+
 func expectEqualPaths(_ lhs: [CodingKey], _ rhs: [CodingKey], _ prefix: String) {
   if lhs.count != rhs.count {
     expectUnreachable("\(prefix) [CodingKey].count mismatch: \(lhs.count) != \(rhs.count)")
@@ -1307,7 +1365,7 @@ fileprivate final class Mapping : Codable, Equatable {
   }
 }
 
-struct NestedContainersTestType : Encodable {
+private struct NestedContainersTestType : Encodable {
   let testSuperEncoder: Bool
 
   init(testSuperEncoder: Bool = false) {
@@ -1518,59 +1576,59 @@ fileprivate enum EitherDecodable<T : Decodable, U : Decodable> : Decodable {
   }
 }
 
-// MARK: - Run Tests
-
-#if !FOUNDATION_XCTEST
-var JSONEncoderTests = TestSuite("TestJSONEncoder")
-JSONEncoderTests.test("testEncodingTopLevelEmptyStruct") { TestJSONEncoder().testEncodingTopLevelEmptyStruct() }
-JSONEncoderTests.test("testEncodingTopLevelEmptyClass") { TestJSONEncoder().testEncodingTopLevelEmptyClass() }
-JSONEncoderTests.test("testEncodingTopLevelSingleValueEnum") { TestJSONEncoder().testEncodingTopLevelSingleValueEnum() }
-JSONEncoderTests.test("testEncodingTopLevelSingleValueStruct") { TestJSONEncoder().testEncodingTopLevelSingleValueStruct() }
-JSONEncoderTests.test("testEncodingTopLevelSingleValueClass") { TestJSONEncoder().testEncodingTopLevelSingleValueClass() }
-JSONEncoderTests.test("testEncodingTopLevelStructuredStruct") { TestJSONEncoder().testEncodingTopLevelStructuredStruct() }
-JSONEncoderTests.test("testEncodingTopLevelStructuredClass") { TestJSONEncoder().testEncodingTopLevelStructuredClass() }
-JSONEncoderTests.test("testEncodingTopLevelStructuredSingleStruct") { TestJSONEncoder().testEncodingTopLevelStructuredSingleStruct() }
-JSONEncoderTests.test("testEncodingTopLevelStructuredSingleClass") { TestJSONEncoder().testEncodingTopLevelStructuredSingleClass() }
-JSONEncoderTests.test("testEncodingTopLevelDeepStructuredType") { TestJSONEncoder().testEncodingTopLevelDeepStructuredType()}
-JSONEncoderTests.test("testEncodingClassWhichSharesEncoderWithSuper") { TestJSONEncoder().testEncodingClassWhichSharesEncoderWithSuper() }
-JSONEncoderTests.test("testEncodingTopLevelNullableType") { TestJSONEncoder().testEncodingTopLevelNullableType() }
-JSONEncoderTests.test("testEncodingOutputFormattingDefault") { TestJSONEncoder().testEncodingOutputFormattingDefault() }
-JSONEncoderTests.test("testEncodingOutputFormattingPrettyPrinted") { TestJSONEncoder().testEncodingOutputFormattingPrettyPrinted() }
-JSONEncoderTests.test("testEncodingOutputFormattingSortedKeys") { TestJSONEncoder().testEncodingOutputFormattingSortedKeys() }
-JSONEncoderTests.test("testEncodingOutputFormattingPrettyPrintedSortedKeys") { TestJSONEncoder().testEncodingOutputFormattingPrettyPrintedSortedKeys() }
-JSONEncoderTests.test("testEncodingDate") { TestJSONEncoder().testEncodingDate() }
-JSONEncoderTests.test("testEncodingDateSecondsSince1970") { TestJSONEncoder().testEncodingDateSecondsSince1970() }
-JSONEncoderTests.test("testEncodingDateMillisecondsSince1970") { TestJSONEncoder().testEncodingDateMillisecondsSince1970() }
-JSONEncoderTests.test("testEncodingDateISO8601") { TestJSONEncoder().testEncodingDateISO8601() }
-JSONEncoderTests.test("testEncodingDateFormatted") { TestJSONEncoder().testEncodingDateFormatted() }
-JSONEncoderTests.test("testEncodingDateCustom") { TestJSONEncoder().testEncodingDateCustom() }
-JSONEncoderTests.test("testEncodingDateCustomEmpty") { TestJSONEncoder().testEncodingDateCustomEmpty() }
-JSONEncoderTests.test("testEncodingData") { TestJSONEncoder().testEncodingData() }
-JSONEncoderTests.test("testEncodingDataBase64") { TestJSONEncoder().testEncodingDataBase64() }
-JSONEncoderTests.test("testEncodingDataCustom") { TestJSONEncoder().testEncodingDataCustom() }
-JSONEncoderTests.test("testEncodingDataCustomEmpty") { TestJSONEncoder().testEncodingDataCustomEmpty() }
-JSONEncoderTests.test("testEncodingNonConformingFloats") { TestJSONEncoder().testEncodingNonConformingFloats() }
-JSONEncoderTests.test("testEncodingNonConformingFloatStrings") { TestJSONEncoder().testEncodingNonConformingFloatStrings() }
-JSONEncoderTests.test("testEncodingKeyStrategySnake") { TestJSONEncoder().testEncodingKeyStrategySnake() }
-JSONEncoderTests.test("testEncodingKeyStrategyCustom") { TestJSONEncoder().testEncodingKeyStrategyCustom() }
-JSONEncoderTests.test("testEncodingKeyStrategyPath") { TestJSONEncoder().testEncodingKeyStrategyPath() }
-JSONEncoderTests.test("testDecodingKeyStrategyCamel") { TestJSONEncoder().testDecodingKeyStrategyCamel() }
-JSONEncoderTests.test("testDecodingKeyStrategyCustom") { TestJSONEncoder().testDecodingKeyStrategyCustom() }
-JSONEncoderTests.test("testEncodingKeyStrategySnakeGenerated") { TestJSONEncoder().testEncodingKeyStrategySnakeGenerated() }
-JSONEncoderTests.test("testDecodingKeyStrategyCamelGenerated") { TestJSONEncoder().testDecodingKeyStrategyCamelGenerated() }
-JSONEncoderTests.test("testKeyStrategySnakeGeneratedAndCustom") { TestJSONEncoder().testKeyStrategySnakeGeneratedAndCustom() }
-JSONEncoderTests.test("testKeyStrategyDuplicateKeys") { TestJSONEncoder().testKeyStrategyDuplicateKeys() }
-JSONEncoderTests.test("testNestedContainerCodingPaths") { TestJSONEncoder().testNestedContainerCodingPaths() }
-JSONEncoderTests.test("testSuperEncoderCodingPaths") { TestJSONEncoder().testSuperEncoderCodingPaths() }
-JSONEncoderTests.test("testInterceptDecimal") { TestJSONEncoder().testInterceptDecimal() }
-JSONEncoderTests.test("testInterceptURL") { TestJSONEncoder().testInterceptURL() }
-JSONEncoderTests.test("testTypeCoercion") { TestJSONEncoder().testTypeCoercion() }
-JSONEncoderTests.test("testDecodingConcreteTypeParameter") { TestJSONEncoder().testDecodingConcreteTypeParameter() }
-JSONEncoderTests.test("testEncoderStateThrowOnEncode") { TestJSONEncoder().testEncoderStateThrowOnEncode() }
-JSONEncoderTests.test("testEncoderStateThrowOnEncodeCustomDate") { TestJSONEncoder().testEncoderStateThrowOnEncodeCustomDate() }
-JSONEncoderTests.test("testEncoderStateThrowOnEncodeCustomData") { TestJSONEncoder().testEncoderStateThrowOnEncodeCustomData() }
-JSONEncoderTests.test("testDecoderStateThrowOnDecode") { TestJSONEncoder().testDecoderStateThrowOnDecode() }
-JSONEncoderTests.test("testDecoderStateThrowOnDecodeCustomDate") { TestJSONEncoder().testDecoderStateThrowOnDecodeCustomDate() }
-JSONEncoderTests.test("testDecoderStateThrowOnDecodeCustomData") { TestJSONEncoder().testDecoderStateThrowOnDecodeCustomData() }
-runAllTests()
-#endif
+extension TestJSONEncoder {
+    static var allTests: [(String, (TestJSONEncoder) -> () throws -> Void)] {
+        return [
+            ("testEncodingTopLevelEmptyStruct", testEncodingTopLevelEmptyStruct),
+            ("testEncodingTopLevelEmptyClass", testEncodingTopLevelEmptyClass),
+            ("testEncodingTopLevelSingleValueEnum", testEncodingTopLevelSingleValueEnum),
+            ("testEncodingTopLevelSingleValueStruct", testEncodingTopLevelSingleValueStruct),
+            ("testEncodingTopLevelSingleValueClass", testEncodingTopLevelSingleValueClass),
+            ("testEncodingTopLevelStructuredStruct", testEncodingTopLevelStructuredStruct),
+            ("testEncodingTopLevelStructuredClass", testEncodingTopLevelStructuredClass),
+            ("testEncodingTopLevelStructuredSingleStruct", testEncodingTopLevelStructuredSingleStruct),
+            ("testEncodingTopLevelStructuredSingleClass", testEncodingTopLevelStructuredSingleClass),
+            ("testEncodingTopLevelDeepStructuredType", testEncodingTopLevelDeepStructuredType),
+            ("testEncodingClassWhichSharesEncoderWithSuper", testEncodingClassWhichSharesEncoderWithSuper),
+            ("testEncodingTopLevelNullableType", testEncodingTopLevelNullableType),
+            ("testEncodingOutputFormattingDefault", testEncodingOutputFormattingDefault),
+            ("testEncodingOutputFormattingPrettyPrinted", testEncodingOutputFormattingPrettyPrinted),
+            ("testEncodingOutputFormattingSortedKeys", testEncodingOutputFormattingSortedKeys),
+            ("testEncodingOutputFormattingPrettyPrintedSortedKeys", testEncodingOutputFormattingPrettyPrintedSortedKeys),
+            ("testEncodingDate", testEncodingDate),
+            ("testEncodingDateSecondsSince1970", testEncodingDateSecondsSince1970),
+            ("testEncodingDateMillisecondsSince1970", testEncodingDateMillisecondsSince1970),
+            ("testEncodingDateISO8601", testEncodingDateISO8601),
+            ("testEncodingDateFormatted", testEncodingDateFormatted),
+            ("testEncodingDateCustom", testEncodingDateCustom),
+            ("testEncodingDateCustomEmpty", testEncodingDateCustomEmpty),
+            ("testEncodingData", testEncodingData),
+            ("testEncodingDataBase64", testEncodingDataBase64),
+            ("testEncodingDataCustom", testEncodingDataCustom),
+            ("testEncodingDataCustomEmpty", testEncodingDataCustomEmpty),
+            ("testEncodingNonConformingFloats", testEncodingNonConformingFloats),
+            ("testEncodingNonConformingFloatStrings", testEncodingNonConformingFloatStrings),
+//            ("testEncodingKeyStrategySnake", testEncodingKeyStrategySnake),
+//            ("testEncodingKeyStrategyCustom", testEncodingKeyStrategyCustom),
+//            ("testEncodingKeyStrategyPath", testEncodingKeyStrategyPath),
+//            ("testDecodingKeyStrategyCamel", testDecodingKeyStrategyCamel),
+//            ("testDecodingKeyStrategyCustom", testDecodingKeyStrategyCustom),
+//            ("testEncodingKeyStrategySnakeGenerated", testEncodingKeyStrategySnakeGenerated),
+//            ("testDecodingKeyStrategyCamelGenerated", testDecodingKeyStrategyCamelGenerated),
+//            ("testKeyStrategySnakeGeneratedAndCustom", testKeyStrategySnakeGeneratedAndCustom),
+//            ("testKeyStrategyDuplicateKeys", testKeyStrategyDuplicateKeys),
+            ("testNestedContainerCodingPaths", testNestedContainerCodingPaths),
+            ("testSuperEncoderCodingPaths", testSuperEncoderCodingPaths),
+            ("testInterceptDecimal", testInterceptDecimal),
+            ("testInterceptURL", testInterceptURL),
+            ("testTypeCoercion", testTypeCoercion),
+            ("testDecodingConcreteTypeParameter", testDecodingConcreteTypeParameter),
+            ("testEncoderStateThrowOnEncode", testEncoderStateThrowOnEncode),
+            ("testEncoderStateThrowOnEncodeCustomDate", testEncoderStateThrowOnEncodeCustomDate),
+            ("testEncoderStateThrowOnEncodeCustomData", testEncoderStateThrowOnEncodeCustomData),
+            ("testDecoderStateThrowOnDecode", testDecoderStateThrowOnDecode),
+            ("testDecoderStateThrowOnDecodeCustomDate", testDecoderStateThrowOnDecodeCustomDate),
+            ("testDecoderStateThrowOnDecodeCustomData", testDecoderStateThrowOnDecodeCustomData)
+        ]
+    }
+}
