@@ -35,7 +35,7 @@ decoded[0].p1   // "string"
 
 ## Requirements
 
-* Swift 4.0 or later
+* Swift 4.0+ on Darwin, Swift 4.0.2+ on swift-corelibs-foundation
 
 ## Author
 

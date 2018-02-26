@@ -86,7 +86,12 @@ public final class JSONObjectDecoder {
     public func decode<T: Decodable>(_ type: T.Type = T.self, from data: Data) throws -> T {
         let topLevel: Any
         do {
+        #if _runtime(_ObjC)
             topLevel = try JSONSerialization.jsonObject(with: data)
+        #else
+            let useReferenceNumericTypes = JSONSerialization.ReadingOptions(rawValue: 1 << 15)
+            topLevel = try JSONSerialization.jsonObject(with: data, options: useReferenceNumericTypes)
+        #endif
         } catch {
             throw _dataCorrupted(at: [], "The given data was not valid JSON.", error)
         }

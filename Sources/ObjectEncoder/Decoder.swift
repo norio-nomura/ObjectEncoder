@@ -6,6 +6,9 @@
 //  Copyright (c) 2017 ObjectEncoder. All rights reserved.
 //
 
+#if !_runtime(_ObjC)
+import CoreFoundation
+#endif
 import Foundation
 
 public struct ObjectDecoder {
@@ -93,73 +96,61 @@ struct _Decoder: Decoder { // swiftlint:disable:this type_name
     let userInfo: [CodingUserInfoKey: Any]
 
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: try cast(object)))
+        return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: try cast()))
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return _UnkeyedDecodingContainer(decoder: self, wrapping: try cast(object))
+        return _UnkeyedDecodingContainer(decoder: self, wrapping: try cast())
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer { return self }
 
     // MARK: -
 
-    fileprivate func unbox<T: Decodable>(_ object: Any) throws -> T {
-        if let strategy = options.decodingStrategies[T.self] {
+    private func applyStrategy<T: Decodable>(_ type: T.Type) throws -> T? {
+        if let strategy = options.decodingStrategies[type] ?? options.decodingStrategies[T.self] {
             return try strategy.closure(self)
-        } else {
-            return try cast(object)
         }
+        return nil
     }
 
-    private func cast<T>(_ object: Any) throws -> T {
+    private func cast<T>() throws -> T {
         guard let value = object as? T else {
             throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
         }
         return value
     }
 
-#if _runtime(_ObjC)
     // - SeeAlso: https://github.com/apple/swift/pull/11885
 
-    fileprivate func unbox<T: Decodable & ShouldNotBeDecodedFromBool>(_ object: Any) throws -> T {
-        if let strategy = options.decodingStrategies[T.self] {
-            return try strategy.closure(self)
-        } else {
-            return try cast(object)
-        }
-    }
-
-    private func cast<T: ShouldNotBeDecodedFromBool>(_ object: Any) throws -> T {
-        guard let number = object as? NSNumber, number !== kCFBooleanTrue, number !== kCFBooleanFalse else {
-            throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
-        }
-        guard let value = object as? T else {
-            throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
-        }
-        return value
-    }
-
-    fileprivate func unbox(_ object: Any) throws -> Bool {
-        if let strategy = options.decodingStrategies[Bool.self] {
-            return try strategy.closure(self)
-        } else {
-            return try cast(object)
-        }
-    }
-
-    private func cast(_ object: Any) throws -> Bool {
+    private func cast<T: ShouldNotBeDecodedFromBool>() throws -> T {
         if let number = object as? NSNumber {
-            if number === kCFBooleanTrue as NSNumber {
+            guard number !== kCFBooleanTrue, number !== kCFBooleanFalse else {
+                throw _typeMismatch(at: codingPath, expectation: NSNumber.self, reality: object)
+            }
+            guard let value = T.init(exactly: number) else {
+                throw _dataCorrupted(at: codingPath, "Parsed number <\(number)> does not fit in \(T.self).")
+            }
+            return value
+        } else if let value = object as? T {
+            return value
+        }
+        throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
+    }
+
+    private func cast() throws -> Bool {
+        if let number = object as? NSNumber {
+            if number === kCFBooleanTrue {
                 return true
-            } else if number === kCFBooleanFalse as NSNumber {
+            } else if number === kCFBooleanFalse {
                 return false
             }
+            throw _typeMismatch(at: codingPath, expectation: type(of: kCFBooleanTrue.self), reality: object)
+        } else if let bool = object as? Bool {
+            return bool
         }
         throw _typeMismatch(at: codingPath, expectation: Bool.self, reality: object)
     }
-
-#endif
 
     /// create a new `_Decoder` instance referencing `object` as `key` inheriting `userInfo`
     fileprivate func decoder(referencing object: Any, `as` key: CodingKey) -> _Decoder {
@@ -315,33 +306,30 @@ extension _Decoder: SingleValueDecodingContainer {
     // MARK: - Swift.SingleValueDecodingContainer Methods
 
     func decodeNil() -> Bool { return object is NSNull }
-    func decode(_ type: Bool.Type)   throws -> Bool { return try unbox(object) }
-    func decode(_ type: Int.Type)    throws -> Int { return try unbox(object) }
-    func decode(_ type: Int8.Type)   throws -> Int8 { return try unbox(object) }
-    func decode(_ type: Int16.Type)  throws -> Int16 { return try unbox(object) }
-    func decode(_ type: Int32.Type)  throws -> Int32 { return try unbox(object) }
-    func decode(_ type: Int64.Type)  throws -> Int64 { return try unbox(object) }
-    func decode(_ type: UInt.Type)   throws -> UInt { return try unbox(object) }
-    func decode(_ type: UInt8.Type)  throws -> UInt8 { return try unbox(object) }
-    func decode(_ type: UInt16.Type) throws -> UInt16 { return try unbox(object) }
-    func decode(_ type: UInt32.Type) throws -> UInt32 { return try unbox(object) }
-    func decode(_ type: UInt64.Type) throws -> UInt64 { return try unbox(object) }
-    func decode(_ type: Float.Type)  throws -> Float { return try unbox(object) }
-    func decode(_ type: Double.Type) throws -> Double { return try unbox(object) }
-    func decode(_ type: String.Type) throws -> String { return try unbox(object) }
-    func decode<T>(_ type: T.Type)   throws -> T where T: Decodable {
-        if let strategy = options.decodingStrategies[type] {
-            return try strategy.closure(self)
-        } else {
-            return try type.init(from: self)
-        }
-    }
+    func decode(_ type: Bool.Type)   throws -> Bool { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int.Type)    throws -> Int { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int8.Type)   throws -> Int8 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int16.Type)  throws -> Int16 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int32.Type)  throws -> Int32 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int64.Type)  throws -> Int64 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt.Type)   throws -> UInt { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt8.Type)  throws -> UInt8 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt16.Type) throws -> UInt16 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt32.Type) throws -> UInt32 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt64.Type) throws -> UInt64 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Float.Type)  throws -> Float { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Double.Type) throws -> Double { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: String.Type) throws -> String { return try applyStrategy(type) ?? cast() }
+    func decode<T: Decodable>(_ type: T.Type) throws -> T { return try applyStrategy(type) ?? type.init(from: self) }
 }
 
 // MARK: - ShouldNotBeDecodedFromBool
 // https://github.com/apple/swift/pull/11885
 
-private protocol ShouldNotBeDecodedFromBool {}
+private protocol ShouldNotBeDecodedFromBool {
+    // Swift 4.0 on darwin, Swift 4.0.2 on swift-corelibs-foundation
+    init?(exactly number: NSNumber)
+}
 extension Int: ShouldNotBeDecodedFromBool {}
 extension Int8: ShouldNotBeDecodedFromBool {}
 extension Int16: ShouldNotBeDecodedFromBool {}
