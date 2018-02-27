@@ -70,9 +70,15 @@ class TestJSONEncoder : TestJSONEncoderSuper {
 
   func testEncodingTopLevelStructuredClass() {
     // Person is a class with multiple fields.
+#if _runtime(_ObjC)
     let expectedJSON = "{\"name\":\"Johnny Appleseed\",\"email\":\"appleseed@apple.com\"}".data(using: .utf8)!
     let person = Person.testValue
     _testRoundTrip(of: person, expectedJSON: expectedJSON)
+#else
+    let expectedJSON = "{\"email\":\"appleseed@apple.com\",\"name\":\"Johnny Appleseed\"}".data(using: .utf8)!
+    let person = Person.testValue
+    _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: .sortedKeys)
+#endif
   }
 
   func testEncodingTopLevelStructuredSingleStruct() {
@@ -114,29 +120,53 @@ class TestJSONEncoder : TestJSONEncoderSuper {
   func testEncodingOutputFormattingDefault() {
     let expectedJSON = "{\"name\":\"Johnny Appleseed\",\"email\":\"appleseed@apple.com\"}".data(using: .utf8)!
     let person = Person.testValue
+#if _runtime(_ObjC)
     _testRoundTrip(of: person, expectedJSON: expectedJSON)
+#else
+    print("Skip \(#function) since the order of elements on enumerating dictionary is not stable on swift-corelibs-foundation.")
+#endif
   }
 
   func testEncodingOutputFormattingPrettyPrinted() {
     let expectedJSON = "{\n  \"name\" : \"Johnny Appleseed\",\n  \"email\" : \"appleseed@apple.com\"\n}".data(using: .utf8)!
     let person = Person.testValue
+#if _runtime(_ObjC)
     _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.prettyPrinted])
+#else
+    print("Skip \(#function) since the order of elements on enumerating dictionary is not stable on swift-corelibs-foundation.")
+#endif
   }
 
   func testEncodingOutputFormattingSortedKeys() {
+#if _runtime(_ObjC)
     if #available(OSX 10.13, iOS 11.0, watchOS 4.0, tvOS 11.0, *) {
       let expectedJSON = "{\"email\":\"appleseed@apple.com\",\"name\":\"Johnny Appleseed\"}".data(using: .utf8)!
       let person = Person.testValue
       _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.sortedKeys])
     }
+#else
+    let expectedJSON = "{\"email\":\"appleseed@apple.com\",\"name\":\"Johnny Appleseed\"}".data(using: .utf8)!
+    let person = Person.testValue
+    _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.sortedKeys])
+#endif
   }
 
   func testEncodingOutputFormattingPrettyPrintedSortedKeys() {
+#if _runtime(_ObjC)
     if #available(OSX 10.13, iOS 11.0, watchOS 4.0, tvOS 11.0, *) {
       let expectedJSON = "{\n  \"email\" : \"appleseed@apple.com\",\n  \"name\" : \"Johnny Appleseed\"\n}".data(using: .utf8)!
       let person = Person.testValue
       _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.prettyPrinted, .sortedKeys])
     }
+#else
+#if swift(>=4.1)
+    let expectedJSON = "{\n  \"email\" : \"appleseed@apple.com\",\n  \"name\" : \"Johnny Appleseed\"\n}".data(using: .utf8)!
+#else
+    let expectedJSON = "{\n  \"email\": \"appleseed@apple.com\",\n  \"name\": \"Johnny Appleseed\"\n}".data(using: .utf8)!
+#endif
+    let person = Person.testValue
+    _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.prettyPrinted, .sortedKeys])
+#endif
   }
 
   // MARK: - Date Strategy Tests
@@ -180,6 +210,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateDecodingStrategy: .millisecondsSince1970)
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(Date(timeIntervalSince1970: seconds)),
                    expectedJSON: expectedJSON,
@@ -204,6 +235,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
 
 
 #if swift(>=4.0.3)
+      // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
       // Optional dates should encode the same way.
       _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                      expectedJSON: expectedJSON,
@@ -228,6 +260,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateDecodingStrategy: .formatted(formatter))
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                    expectedJSON: expectedJSON,
@@ -254,6 +287,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateDecodingStrategy: .custom(decode))
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                    expectedJSON: expectedJSON,
@@ -277,6 +311,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dateDecodingStrategy: .custom(decode))
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional dates should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(timestamp),
                    expectedJSON: expectedJSON,
@@ -311,6 +346,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
     _testRoundTrip(of: TopLevelWrapper(data), expectedJSON: expectedJSON)
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional data should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(data), expectedJSON: expectedJSON)
 #endif
@@ -332,6 +368,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dataDecodingStrategy: .custom(decode))
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional data should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(Data()),
                    expectedJSON: expectedJSON,
@@ -353,6 +390,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
                    dataDecodingStrategy: .custom(decode))
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional Data should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(Data()),
                    expectedJSON: expectedJSON,
@@ -762,6 +800,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
   }
 
   func testInterceptDecimal() {
+#if _runtime(_ObjC)
     let expectedJSON = "{\"value\":10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}".data(using: .utf8)!
 
     // Want to make sure we write out a JSON number, not the keyed encoding here.
@@ -770,18 +809,25 @@ class TestJSONEncoder : TestJSONEncoderSuper {
     _testRoundTrip(of: TopLevelWrapper(decimal), expectedJSON: expectedJSON)
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional Decimals should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(decimal), expectedJSON: expectedJSON)
+#endif
 #endif
   }
 
   func testInterceptURL() {
     // Want to make sure JSONEncoder writes out single-value URLs, not the keyed encoding.
+#if _runtime(_ObjC) || (!_runtime(_ObjC) && swift(>=4.1))
     let expectedJSON = "{\"value\":\"http:\\/\\/swift.org\"}".data(using: .utf8)!
+#else
+    let expectedJSON = "{\"value\":\"http://swift.org\"}".data(using: .utf8)!
+#endif
     let url = URL(string: "http://swift.org")!
     _testRoundTrip(of: TopLevelWrapper(url), expectedJSON: expectedJSON)
 
 #if swift(>=4.0.3)
+    // following test requires that https://bugs.swift.org/browse/SR-5206 is fixed.
     // Optional URLs should encode the same way.
     _testRoundTrip(of: OptionalTopLevelWrapper(url), expectedJSON: expectedJSON)
 #endif
