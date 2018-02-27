@@ -6,6 +6,9 @@
 //  Copyright (c) 2017 ObjectEncoder. All rights reserved.
 //
 
+#if !_runtime(_ObjC)
+import CoreFoundation
+#endif
 import Foundation
 
 public struct ObjectDecoder {
@@ -72,7 +75,7 @@ public struct ObjectDecoder {
 
 struct _Decoder: Decoder { // swiftlint:disable:this type_name
 
-    private let object: Any
+    let object: Any
 
     fileprivate typealias Options = ObjectDecoder.Options
     private let options: Options
@@ -93,30 +96,60 @@ struct _Decoder: Decoder { // swiftlint:disable:this type_name
     let userInfo: [CodingUserInfoKey: Any]
 
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: try cast(object)))
+        return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: try cast()))
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        return _UnkeyedDecodingContainer(decoder: self, wrapping: try cast(object))
+        return _UnkeyedDecodingContainer(decoder: self, wrapping: try cast())
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer { return self }
 
     // MARK: -
 
-    fileprivate func unbox<T: Decodable>(_ object: Any) throws -> T {
-        if let strategy = options.decodingStrategies[T.self] {
+    private func applyStrategy<T: Decodable>(_ type: T.Type) throws -> T? {
+        if let strategy = options.decodingStrategies[type] ?? options.decodingStrategies[T.self] {
             return try strategy.closure(self)
-        } else {
-            return try cast(object)
         }
+        return nil
     }
 
-    private func cast<T>(_ object: Any) throws -> T {
+    private func cast<T>() throws -> T {
         guard let value = object as? T else {
             throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
         }
         return value
+    }
+
+    // - SeeAlso: https://github.com/apple/swift/pull/11885
+
+    private func cast<T: ShouldNotBeDecodedFromBool>() throws -> T {
+        if let number = object as? NSNumber {
+            guard number !== kCFBooleanTrue, number !== kCFBooleanFalse else {
+                throw _typeMismatch(at: codingPath, expectation: NSNumber.self, reality: object)
+            }
+            guard let value = T.init(exactly: number) else {
+                throw _dataCorrupted(at: codingPath, "Parsed number <\(number)> does not fit in \(T.self).")
+            }
+            return value
+        } else if let value = object as? T {
+            return value
+        }
+        throw _typeMismatch(at: codingPath, expectation: T.self, reality: object)
+    }
+
+    private func cast() throws -> Bool {
+        if let number = object as? NSNumber {
+            if number === kCFBooleanTrue {
+                return true
+            } else if number === kCFBooleanFalse {
+                return false
+            }
+            throw _typeMismatch(at: codingPath, expectation: type(of: kCFBooleanTrue.self), reality: object)
+        } else if let bool = object as? Bool {
+            return bool
+        }
+        throw _typeMismatch(at: codingPath, expectation: Bool.self, reality: object)
     }
 
     /// create a new `_Decoder` instance referencing `object` as `key` inheriting `userInfo`
@@ -153,24 +186,21 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
         return try object(for: key) is NSNull
     }
 
-    func decode(_ type: Bool.Type, forKey key: Key)   throws -> Bool { return try unbox(for: key) }
-    func decode(_ type: Int.Type, forKey key: Key)    throws -> Int { return try unbox(for: key) }
-    func decode(_ type: Int8.Type, forKey key: Key)   throws -> Int8 { return try unbox(for: key) }
-    func decode(_ type: Int16.Type, forKey key: Key)  throws -> Int16 { return try unbox(for: key) }
-    func decode(_ type: Int32.Type, forKey key: Key)  throws -> Int32 { return try unbox(for: key) }
-    func decode(_ type: Int64.Type, forKey key: Key)  throws -> Int64 { return try unbox(for: key) }
-    func decode(_ type: UInt.Type, forKey key: Key)   throws -> UInt { return try unbox(for: key) }
-    func decode(_ type: UInt8.Type, forKey key: Key)  throws -> UInt8 { return try unbox(for: key) }
-    func decode(_ type: UInt16.Type, forKey key: Key) throws -> UInt16 { return try unbox(for: key) }
-    func decode(_ type: UInt32.Type, forKey key: Key) throws -> UInt32 { return try unbox(for: key) }
-    func decode(_ type: UInt64.Type, forKey key: Key) throws -> UInt64 { return try unbox(for: key) }
-    func decode(_ type: Float.Type, forKey key: Key)  throws -> Float { return try unbox(for: key) }
-    func decode(_ type: Double.Type, forKey key: Key) throws -> Double { return try unbox(for: key) }
-    func decode(_ type: String.Type, forKey key: Key) throws -> String { return try unbox(for: key) }
-
-    func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T: Decodable {
-        return try decoder(for: key).decode(type)
-    }
+    func decode(_ type: Bool.Type, forKey key: Key)   throws -> Bool { return try decoder(for: key).decode(type) }
+    func decode(_ type: Int.Type, forKey key: Key)    throws -> Int { return try decoder(for: key).decode(type) }
+    func decode(_ type: Int8.Type, forKey key: Key)   throws -> Int8 { return try decoder(for: key).decode(type) }
+    func decode(_ type: Int16.Type, forKey key: Key)  throws -> Int16 { return try decoder(for: key).decode(type) }
+    func decode(_ type: Int32.Type, forKey key: Key)  throws -> Int32 { return try decoder(for: key).decode(type) }
+    func decode(_ type: Int64.Type, forKey key: Key)  throws -> Int64 { return try decoder(for: key).decode(type) }
+    func decode(_ type: UInt.Type, forKey key: Key)   throws -> UInt { return try decoder(for: key).decode(type) }
+    func decode(_ type: UInt8.Type, forKey key: Key)  throws -> UInt8 { return try decoder(for: key).decode(type) }
+    func decode(_ type: UInt16.Type, forKey key: Key) throws -> UInt16 { return try decoder(for: key).decode(type) }
+    func decode(_ type: UInt32.Type, forKey key: Key) throws -> UInt32 { return try decoder(for: key).decode(type) }
+    func decode(_ type: UInt64.Type, forKey key: Key) throws -> UInt64 { return try decoder(for: key).decode(type) }
+    func decode(_ type: Float.Type, forKey key: Key)  throws -> Float { return try decoder(for: key).decode(type) }
+    func decode(_ type: Double.Type, forKey key: Key) throws -> Double { return try decoder(for: key).decode(type) }
+    func decode(_ type: String.Type, forKey key: Key) throws -> String { return try decoder(for: key).decode(type) }
+    func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T { return try decoder(for: key).decode(type) }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type,
                                     forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
@@ -195,10 +225,6 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
 
     private func decoder(for key: CodingKey) throws -> _Decoder {
         return decoder.decoder(referencing: try object(for: key), as: key)
-    }
-
-    private func unbox<T: Decodable>(for key: Key) throws -> T {
-        return try decoder(for: key).unbox(object(for: key))
     }
 }
 
@@ -230,61 +256,46 @@ struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disabl
         }
     }
 
-    mutating func decode(_ type: Bool.Type)   throws -> Bool { return try unbox() }
-    mutating func decode(_ type: Int.Type)    throws -> Int { return try unbox() }
-    mutating func decode(_ type: Int8.Type)   throws -> Int8 { return try unbox() }
-    mutating func decode(_ type: Int16.Type)  throws -> Int16 { return try unbox() }
-    mutating func decode(_ type: Int32.Type)  throws -> Int32 { return try unbox() }
-    mutating func decode(_ type: Int64.Type)  throws -> Int64 { return try unbox() }
-    mutating func decode(_ type: UInt.Type)   throws -> UInt { return try unbox() }
-    mutating func decode(_ type: UInt8.Type)  throws -> UInt8 { return try unbox() }
-    mutating func decode(_ type: UInt16.Type) throws -> UInt16 { return try unbox() }
-    mutating func decode(_ type: UInt32.Type) throws -> UInt32 { return try unbox() }
-    mutating func decode(_ type: UInt64.Type) throws -> UInt64 { return try unbox() }
-    mutating func decode(_ type: Float.Type)  throws -> Float { return try unbox() }
-    mutating func decode(_ type: Double.Type) throws -> Double { return try unbox() }
-    mutating func decode(_ type: String.Type) throws -> String { return try unbox() }
-
-    mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
-        try throwErrorIfAtEnd(type)
-        let value = try currentDecoder.decode(type)
-        currentIndex += 1
-        return value
-    }
+    mutating func decode(_ type: Bool.Type)   throws -> Bool { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: Int.Type)    throws -> Int { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: Int8.Type)   throws -> Int8 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: Int16.Type)  throws -> Int16 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: Int32.Type)  throws -> Int32 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: Int64.Type)  throws -> Int64 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: UInt.Type)   throws -> UInt { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: UInt8.Type)  throws -> UInt8 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: UInt16.Type) throws -> UInt16 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: UInt32.Type) throws -> UInt32 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: UInt64.Type) throws -> UInt64 { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: Float.Type)  throws -> Float { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: Double.Type) throws -> Double { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode(_ type: String.Type) throws -> String { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode<T: Decodable>(_ type: T.Type) throws -> T { return try currentDecoder { try $0.decode(type) } }
 
     mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> {
-        try throwErrorIfAtEnd(KeyedDecodingContainer<NestedKey>.self)
-        let container = try currentDecoder.container(keyedBy: type)
-        currentIndex += 1
-        return container
+        return try currentDecoder { try $0.container(keyedBy: type) }
     }
 
     mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
-        try throwErrorIfAtEnd(UnkeyedDecodingContainer.self)
-        let container = try currentDecoder.unkeyedContainer()
-        currentIndex += 1
-        return container
+        return try currentDecoder { try $0.unkeyedContainer() }
     }
 
     mutating func superDecoder() throws -> Decoder {
-        try throwErrorIfAtEnd(Decoder.self)
-        defer { currentIndex += 1 }
-        return currentDecoder
+        return try currentDecoder { $0 }
     }
 
     // MARK: -
 
     private var currentKey: CodingKey { return _ObjectCodingKey(index: currentIndex) }
     private var currentObject: Any { return array[currentIndex] }
-    private var currentDecoder: _Decoder { return decoder.decoder(referencing: currentObject, as: currentKey) }
 
     private func throwErrorIfAtEnd<T>(_ type: T.Type) throws {
         if isAtEnd { throw _valueNotFound(at: codingPath + [currentKey], type, "Unkeyed container is at end.") }
     }
 
-    private mutating func unbox<T: Decodable>() throws -> T {
+    private mutating func currentDecoder<T>(closure: (_Decoder) throws -> T) throws -> T {
         try throwErrorIfAtEnd(T.self)
-        let decoded: T = try currentDecoder.unbox(currentObject)
+        let decoded: T = try closure(decoder.decoder(referencing: currentObject, as: currentKey))
         currentIndex += 1
         return decoded
     }
@@ -295,32 +306,47 @@ extension _Decoder: SingleValueDecodingContainer {
     // MARK: - Swift.SingleValueDecodingContainer Methods
 
     func decodeNil() -> Bool { return object is NSNull }
-    func decode(_ type: Bool.Type)   throws -> Bool { return try unbox(object) }
-    func decode(_ type: Int.Type)    throws -> Int { return try unbox(object) }
-    func decode(_ type: Int8.Type)   throws -> Int8 { return try unbox(object) }
-    func decode(_ type: Int16.Type)  throws -> Int16 { return try unbox(object) }
-    func decode(_ type: Int32.Type)  throws -> Int32 { return try unbox(object) }
-    func decode(_ type: Int64.Type)  throws -> Int64 { return try unbox(object) }
-    func decode(_ type: UInt.Type)   throws -> UInt { return try unbox(object) }
-    func decode(_ type: UInt8.Type)  throws -> UInt8 { return try unbox(object) }
-    func decode(_ type: UInt16.Type) throws -> UInt16 { return try unbox(object) }
-    func decode(_ type: UInt32.Type) throws -> UInt32 { return try unbox(object) }
-    func decode(_ type: UInt64.Type) throws -> UInt64 { return try unbox(object) }
-    func decode(_ type: Float.Type)  throws -> Float { return try unbox(object) }
-    func decode(_ type: Double.Type) throws -> Double { return try unbox(object) }
-    func decode(_ type: String.Type) throws -> String { return try unbox(object) }
-    func decode<T>(_ type: T.Type)   throws -> T where T: Decodable {
-        if let strategy = options.decodingStrategies[type] {
-            return try strategy.closure(self)
-        } else {
-            return try type.init(from: self)
-        }
-    }
+    func decode(_ type: Bool.Type)   throws -> Bool { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int.Type)    throws -> Int { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int8.Type)   throws -> Int8 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int16.Type)  throws -> Int16 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int32.Type)  throws -> Int32 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Int64.Type)  throws -> Int64 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt.Type)   throws -> UInt { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt8.Type)  throws -> UInt8 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt16.Type) throws -> UInt16 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt32.Type) throws -> UInt32 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: UInt64.Type) throws -> UInt64 { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Float.Type)  throws -> Float { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: Double.Type) throws -> Double { return try applyStrategy(type) ?? cast() }
+    func decode(_ type: String.Type) throws -> String { return try applyStrategy(type) ?? cast() }
+    func decode<T: Decodable>(_ type: T.Type) throws -> T { return try applyStrategy(type) ?? type.init(from: self) }
 }
+
+// MARK: - ShouldNotBeDecodedFromBool
+// https://github.com/apple/swift/pull/11885
+
+private protocol ShouldNotBeDecodedFromBool {
+    // Swift 4.0 on darwin, Swift 4.0.2 on swift-corelibs-foundation
+    init?(exactly number: NSNumber)
+}
+extension Int: ShouldNotBeDecodedFromBool {}
+extension Int8: ShouldNotBeDecodedFromBool {}
+extension Int16: ShouldNotBeDecodedFromBool {}
+extension Int32: ShouldNotBeDecodedFromBool {}
+extension Int64: ShouldNotBeDecodedFromBool {}
+extension UInt: ShouldNotBeDecodedFromBool {}
+extension UInt8: ShouldNotBeDecodedFromBool {}
+extension UInt16: ShouldNotBeDecodedFromBool {}
+extension UInt32: ShouldNotBeDecodedFromBool {}
+extension UInt64: ShouldNotBeDecodedFromBool {}
+extension Float: ShouldNotBeDecodedFromBool {}
+extension Double: ShouldNotBeDecodedFromBool {}
 
 // MARK: - DecodingError helpers
 
-private func _dataCorrupted(at codingPath: [CodingKey], _ description: String, _ error: Error? = nil) -> DecodingError {
+// swiftlint:disable:next identifier_name
+func _dataCorrupted(at codingPath: [CodingKey], _ description: String, _ error: Error? = nil) -> DecodingError {
     let context = DecodingError.Context(codingPath: codingPath, debugDescription: description, underlyingError: error)
     return .dataCorrupted(context)
 }
@@ -348,6 +374,11 @@ extension ObjectDecoder {
     public typealias DataDecodingStrategy = DecodingStrategy<Data>
     /// The strategy to use for decoding `Date` values.
     public typealias DateDecodingStrategy = DecodingStrategy<Date>
+
+    /// The strategy to use for decoding `Double` values.
+    public typealias DoubleDecodingStrategy = DecodingStrategy<Double>
+    /// The strategy to use for decoding `Float` values.
+    public typealias FloatDecodingStrategy = DecodingStrategy<Float>
 }
 
 extension ObjectDecoder.DecodingStrategy {
@@ -372,7 +403,7 @@ extension ObjectDecoder.DecodingStrategy where T == Data {
 
     /// Decode the `Data` as a custom value decoded by the given closure.
     public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DataDecodingStrategy {
-        return .init(identifiers: ObjectDecoder.DataDecodingStrategy.identifiers, closure: closure)
+        return .init(identifiers: identifiers, closure: closure)
     }
 
     private static let identifiers = [Data.self, NSData.self].map(ObjectIdentifier.init)
@@ -412,8 +443,108 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
 
     /// Decode the `Date` as a custom value decoded by the given closure.
     public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DateDecodingStrategy {
-        return .init(identifiers: ObjectDecoder.DateDecodingStrategy.identifiers, closure: closure)
+        return .init(identifiers: identifiers, closure: closure)
     }
 
     private static let identifiers = [Date.self, NSDate.self].map(ObjectIdentifier.init)
-} // swiftlint:disable:this file_length
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Decimal {
+    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<Decimal>.custom {
+        guard let decoder = $0 as? _Decoder else {
+            fatalError("unreachable")
+        }
+        if let decimal = decoder.object as? Decimal {
+            return decimal
+        } else {
+            return Decimal(try Double(from: decoder))
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<Decimal> {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Decimal.self, NSDecimalNumber.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Double {
+    public static let deferredToDouble: ObjectDecoder.DoubleDecodingStrategy? = nil
+
+    public static func convertNonConformingFloatFromString(_ positiveInfinity: String,
+                                                           _ negativeInfinity: String,
+                                                           _ nan: String) -> ObjectDecoder.DoubleDecodingStrategy {
+        return .custom {
+            guard let decoder = $0 as? _Decoder else {
+                fatalError("unreachable")
+            }
+            if let double = decoder.object as? Double {
+                return double
+            } else if let string = decoder.object as? String {
+                if string == positiveInfinity {
+                    return .infinity
+                } else if string == negativeInfinity {
+                    return -.infinity
+                } else if string == nan {
+                    return .nan
+                }
+            }
+            throw _typeMismatch(at: decoder.codingPath, expectation: Double.self, reality: decoder.object)
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DoubleDecodingStrategy {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Double.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectDecoder.DecodingStrategy where T == Float {
+    public static let deferredToFloat: ObjectDecoder.FloatDecodingStrategy? = nil
+
+    public static func convertNonConformingFloatFromString(_ positiveInfinity: String,
+                                                           _ negativeInfinity: String,
+                                                           _ nan: String) -> ObjectDecoder.FloatDecodingStrategy {
+        return .custom {
+            guard let decoder = $0 as? _Decoder else {
+                fatalError("unreachable")
+            }
+            if let float = decoder.object as? Float {
+                return float
+            } else if let string = decoder.object as? String {
+                if string == positiveInfinity {
+                    return .infinity
+                } else if string == negativeInfinity {
+                    return -.infinity
+                } else if string == nan {
+                    return .nan
+                }
+            }
+            throw _typeMismatch(at: decoder.codingPath, expectation: Float.self, reality: decoder.object)
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.FloatDecodingStrategy {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Float.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectDecoder.DecodingStrategy where T == URL {
+    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<URL>.custom {
+        guard let url = URL(string: try String(from: $0)) else {
+            throw _dataCorrupted(at: $0.codingPath, "Invalid URL string.")
+        }
+        return url
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<URL> {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [URL.self, NSURL.self].map(ObjectIdentifier.init)
+}
+
+// swiftlint:disable:this file_length

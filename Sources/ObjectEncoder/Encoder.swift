@@ -82,7 +82,7 @@ class _Encoder: Swift.Encoder { // swiftlint:disable:this type_name
         fileprivate static let unused = Unused()
     }
 
-    fileprivate var object: Any = Unused.unused
+    fileprivate var object: Any = [:]
 
     fileprivate typealias Options = ObjectEncoder.Options
     fileprivate let options: Options
@@ -153,7 +153,12 @@ class _Encoder: Swift.Encoder { // swiftlint:disable:this type_name
         }
     }
 
-    private var canEncodeNewValue: Bool { return object is Unused }
+    private var canEncodeNewValue: Bool {
+        if let dictionary = object as? [String: Any], dictionary.isEmpty {
+            return true
+        }
+        return false
+    }
 }
 
 class _ObjectReferencingEncoder: _Encoder { // swiftlint:disable:this type_name
@@ -355,6 +360,25 @@ struct _ObjectCodingKey: CodingKey { // swiftlint:disable:this type_name
     static let `super` = _ObjectCodingKey(stringValue: "super")!
 }
 
+// MARK: - EncodingError helpers
+
+private func _invalidFloatingPointValue<T: FloatingPoint>(_ value: T, at codingPath: [CodingKey]) -> EncodingError {
+    let valueDescription: String
+    if value == T.infinity {
+        valueDescription = "\(T.self).infinity"
+    } else if value == -T.infinity {
+        valueDescription = "-\(T.self).infinity"
+    } else {
+        valueDescription = "\(T.self).nan"
+    }
+
+    let debugDescription = """
+    Unable to encode \(valueDescription) directly in JSONObjectEncoder. \
+    Use JSONObjectEncoder.NonConformingFloatEncodingStrategy.convertToString to specify how the value should be encoded.
+    """
+    return .invalidValue(value, .init(codingPath: codingPath, debugDescription: debugDescription))
+}
+
 // MARK: - ObjectEncoder.EncodingStrategy
 
 extension ObjectEncoder {
@@ -362,6 +386,11 @@ extension ObjectEncoder {
     public typealias DataEncodingStrategy = EncodingStrategy<Data>
     /// The strategy to use for encoding `Date` values.
     public typealias DateEncodingStrategy = EncodingStrategy<Date>
+
+    /// The strategy to use for encoding `Double` values.
+    public typealias DoubleEncodingStrategy = EncodingStrategy<Double>
+    /// The strategy to use for encoding `Float` values.
+    public typealias FloatEncodingStrategy = EncodingStrategy<Float>
 }
 
 extension ObjectEncoder.EncodingStrategy {
@@ -389,7 +418,7 @@ extension ObjectEncoder.EncodingStrategy where T == Data {
     /// If the closure fails to encode a value into the given encoder,
     /// the encoder will encode an empty automatic container in its place.
     public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DataEncodingStrategy {
-        return .init(identifiers: ObjectEncoder.DataEncodingStrategy.identifiers, closure: closure)
+        return .init(identifiers: identifiers, closure: closure)
     }
 
     private static let identifiers = [Data.self, NSData.self].map(ObjectIdentifier.init)
@@ -438,8 +467,110 @@ extension ObjectEncoder.EncodingStrategy where T == Date {
     /// If the closure fails to encode a value into the given encoder,
     /// the encoder will encode an empty automatic container in its place.
     public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DateEncodingStrategy {
-        return .init(identifiers: ObjectEncoder.DateEncodingStrategy.identifiers, closure: closure)
+        return .init(identifiers: identifiers, closure: closure)
     }
 
     private static let identifiers = [Date.self, NSDate.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectEncoder.EncodingStrategy where T == Decimal {
+    public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<Decimal>.custom {
+        guard let encoder = $1 as? _Encoder else {
+            fatalError("unreachable")
+        }
+        encoder.object = NSDecimalNumber(decimal: $0)
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<Decimal> {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Decimal.self, NSDecimalNumber.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectEncoder.EncodingStrategy where T == Double {
+    public static let throwOnNonConformingFloat = ObjectEncoder.DoubleEncodingStrategy.custom {
+        guard let encoder = $1 as? _Encoder else {
+            fatalError("unreachable")
+        }
+        guard !$0.isInfinite && !$0.isNaN else {
+            throw _invalidFloatingPointValue($0, at: encoder.codingPath)
+        }
+        encoder.object = NSNumber(value: $0)
+    }
+
+    public static func convertNonConformingFloatToString(_ positiveInfinity: String,
+                                                         _ negativeInfinity: String,
+                                                         _ nan: String) -> ObjectEncoder.DoubleEncodingStrategy {
+        return .custom {
+            guard let encoder = $1 as? _Encoder else {
+                fatalError("unreachable")
+            }
+            if $0 == .infinity {
+                encoder.object = positiveInfinity
+            } else if $0 == -.infinity {
+                encoder.object = negativeInfinity
+            } else if $0.isNaN {
+                encoder.object = nan
+            } else {
+                encoder.object = NSNumber(value: $0)
+            }
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DoubleEncodingStrategy {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Double.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectEncoder.EncodingStrategy where T == Float {
+    public static let throwOnNonConformingFloat = ObjectEncoder.FloatEncodingStrategy.custom {
+        guard let encoder = $1 as? _Encoder else {
+            fatalError("unreachable")
+        }
+        guard !$0.isInfinite && !$0.isNaN else {
+            throw _invalidFloatingPointValue($0, at: encoder.codingPath)
+        }
+        encoder.object = NSNumber(value: $0)
+    }
+
+    public static func convertNonConformingFloatToString(_ positiveInfinity: String,
+                                                         _ negativeInfinity: String,
+                                                         _ nan: String) -> ObjectEncoder.FloatEncodingStrategy {
+        return .custom {
+            guard let encoder = $1 as? _Encoder else {
+                fatalError("unreachable")
+            }
+            if $0 == .infinity {
+                encoder.object = positiveInfinity
+            } else if $0 == -.infinity {
+                encoder.object = negativeInfinity
+            } else if $0.isNaN {
+                encoder.object = nan
+            } else {
+                encoder.object = NSNumber(value: $0)
+            }
+        }
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.FloatEncodingStrategy {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [Float.self].map(ObjectIdentifier.init)
+}
+
+extension ObjectEncoder.EncodingStrategy where T == URL {
+    public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<URL>.custom {
+        var container = $1.singleValueContainer()
+        try container.encode($0.absoluteString)
+    }
+
+    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<URL> {
+        return .init(identifiers: identifiers, closure: closure)
+    }
+
+    private static let identifiers = [URL.self, NSURL.self].map(ObjectIdentifier.init)
 } // swiftlint:disable:this file_length
