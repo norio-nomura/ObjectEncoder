@@ -76,12 +76,6 @@ public struct ObjectEncoder {
 }
 
 class _Encoder: Swift.Encoder { // swiftlint:disable:this type_name
-
-    struct Unused {
-        private init() {}
-        fileprivate static let unused = Unused()
-    }
-
     fileprivate var object: Any = [:]
 
     fileprivate typealias Options = ObjectEncoder.Options
