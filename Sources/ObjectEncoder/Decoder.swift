@@ -17,7 +17,7 @@ public struct ObjectDecoder {
                           from object: Any,
                           userInfo: [CodingUserInfoKey: Any] = [:]) throws -> T where T: Decodable {
         do {
-            return try _Decoder(object, options, userInfo).singleValueContainer().decode(type)
+            return try ObjectDecoder.Decoder(object, options, userInfo).singleValueContainer().decode(type)
         } catch let error as DecodingError {
             throw error
         } catch {
@@ -26,7 +26,7 @@ public struct ObjectDecoder {
     }
 
     public struct DecodingStrategy<T: Decodable> {
-        public typealias Closure = (Decoder) throws -> T
+        public typealias Closure = (Swift.Decoder) throws -> T
         public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
             self.identifiers = identifiers
             self.closure = closure
@@ -73,28 +73,32 @@ public struct ObjectDecoder {
     fileprivate var options = Options()
 }
 
-struct _Decoder: Decoder { // swiftlint:disable:this type_name
+extension ObjectDecoder {
+    struct Decoder: Swift.Decoder {
 
-    let object: Any
+        let object: Any
 
-    fileprivate typealias Options = ObjectDecoder.Options
-    private let options: Options
+        fileprivate typealias Options = ObjectDecoder.Options
+        private let options: Options
 
-    fileprivate init(_ object: Any,
-                     _ options: Options,
-                     _ userInfo: [CodingUserInfoKey: Any],
-                     _ codingPath: [CodingKey] = []) {
-        self.object = object
-        self.options = options
-        self.userInfo = userInfo
-        self.codingPath = codingPath
+        fileprivate init(_ object: Any,
+                         _ options: Options,
+                         _ userInfo: [CodingUserInfoKey: Any],
+                         _ codingPath: [CodingKey] = []) {
+            self.object = object
+            self.options = options
+            self.userInfo = userInfo
+            self.codingPath = codingPath
+        }
+
+        // MARK: - Swift.Decoder Methods
+
+        let codingPath: [CodingKey]
+        let userInfo: [CodingUserInfoKey: Any]
     }
+}
 
-    // MARK: - Swift.Decoder Methods
-
-    let codingPath: [CodingKey]
-    let userInfo: [CodingUserInfoKey: Any]
-
+extension ObjectDecoder.Decoder {
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: try cast()))
     }
@@ -153,19 +157,17 @@ struct _Decoder: Decoder { // swiftlint:disable:this type_name
     }
 
     /// create a new `_Decoder` instance referencing `object` as `key` inheriting `userInfo`
-    fileprivate func decoder(referencing object: Any, `as` key: CodingKey) -> _Decoder {
+    fileprivate func decoder(referencing object: Any, `as` key: CodingKey) -> ObjectDecoder.Decoder {
         return .init(object, options, userInfo, codingPath + [key])
     }
 }
 
-struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { // swiftlint:disable:this type_name
+private struct _KeyedDecodingContainer<Key: CodingKey> : KeyedDecodingContainerProtocol {
 
-    typealias Key = K
-
-    private let decoder: _Decoder
+    private let decoder: ObjectDecoder.Decoder
     private let dictionary: [String: Any]
 
-    fileprivate init(decoder: _Decoder, wrapping dictionary: [String: Any]) {
+    init(decoder: ObjectDecoder.Decoder, wrapping dictionary: [String: Any]) {
         self.decoder = decoder
         self.dictionary = dictionary
     }
@@ -223,17 +225,17 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
         return object
     }
 
-    private func decoder(for key: CodingKey) throws -> _Decoder {
+    private func decoder(for key: CodingKey) throws -> ObjectDecoder.Decoder {
         return decoder.decoder(referencing: try object(for: key), as: key)
     }
 }
 
-struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disable:this type_name
+private struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer {
 
-    private let decoder: _Decoder
+    private let decoder: ObjectDecoder.Decoder
     private let array: [Any]
 
-    fileprivate init(decoder: _Decoder, wrapping array: [Any]) {
+    init(decoder: ObjectDecoder.Decoder, wrapping array: [Any]) {
         self.decoder = decoder
         self.array = array
         self.currentIndex = 0
@@ -293,7 +295,7 @@ struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disabl
         if isAtEnd { throw _valueNotFound(at: codingPath + [currentKey], type, "Unkeyed container is at end.") }
     }
 
-    private mutating func currentDecoder<T>(closure: (_Decoder) throws -> T) throws -> T {
+    private mutating func currentDecoder<T>(closure: (ObjectDecoder.Decoder) throws -> T) throws -> T {
         try throwErrorIfAtEnd(T.self)
         let decoded: T = try closure(decoder.decoder(referencing: currentObject, as: currentKey))
         currentIndex += 1
@@ -301,7 +303,7 @@ struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disabl
     }
 }
 
-extension _Decoder: SingleValueDecodingContainer {
+extension ObjectDecoder.Decoder: SingleValueDecodingContainer {
 
     // MARK: - Swift.SingleValueDecodingContainer Methods
 
@@ -451,7 +453,7 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
 
 extension ObjectDecoder.DecodingStrategy where T == Decimal {
     public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<Decimal>.custom {
-        guard let decoder = $0 as? _Decoder else {
+        guard let decoder = $0 as? ObjectDecoder.Decoder else {
             fatalError("unreachable")
         }
         if let decimal = decoder.object as? Decimal {
@@ -475,7 +477,7 @@ extension ObjectDecoder.DecodingStrategy where T == Double {
                                                            _ negativeInfinity: String,
                                                            _ nan: String) -> ObjectDecoder.DoubleDecodingStrategy {
         return .custom {
-            guard let decoder = $0 as? _Decoder else {
+            guard let decoder = $0 as? ObjectDecoder.Decoder else {
                 fatalError("unreachable")
             }
             if let double = decoder.object as? Double {
@@ -507,7 +509,7 @@ extension ObjectDecoder.DecodingStrategy where T == Float {
                                                            _ negativeInfinity: String,
                                                            _ nan: String) -> ObjectDecoder.FloatDecodingStrategy {
         return .custom {
-            guard let decoder = $0 as? _Decoder else {
+            guard let decoder = $0 as? ObjectDecoder.Decoder else {
                 fatalError("unreachable")
             }
             if let float = decoder.object as? Float {
