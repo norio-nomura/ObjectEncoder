@@ -26,7 +26,7 @@ public struct ObjectDecoder {
     }
 
     public struct DecodingStrategy<T: Decodable> {
-        public typealias Closure = (Swift.Decoder) throws -> T
+        public typealias Closure = (Decoder) throws -> T
         public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
             self.identifiers = identifiers
             self.closure = closure
@@ -400,9 +400,9 @@ extension ObjectDecoder.DecodingStrategy where T == Data {
     public static let deferredToData: ObjectDecoder.DataDecodingStrategy? = nil
 
     /// Decode the `Data` from a Base64-encoded string. This is the default strategy.
-    public static let base64 = ObjectDecoder.DataDecodingStrategy.custom {
-        guard let data = Data(base64Encoded: try String(from: $0)) else {
-            throw _dataCorrupted(at: $0.codingPath, "Encountered Data is not valid Base64.")
+    public static let base64 = ObjectDecoder.DataDecodingStrategy.custom { decoder in
+        guard let data = Data(base64Encoded: try String(from: decoder)) else {
+            throw _dataCorrupted(at: decoder.codingPath, "Encountered Data is not valid Base64.")
         }
         return data
     }
@@ -420,28 +420,28 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
     public static let deferredToDate: ObjectDecoder.DateDecodingStrategy? = nil
 
     /// Decode the `Date` as a UNIX timestamp from a `Double`.
-    public static let secondsSince1970 = ObjectDecoder.DateDecodingStrategy.custom {
-        Date(timeIntervalSince1970: try Double(from: $0))
+    public static let secondsSince1970 = ObjectDecoder.DateDecodingStrategy.custom { decoder in
+        Date(timeIntervalSince1970: try Double(from: decoder))
     }
 
     /// Decode the `Date` as UNIX millisecond timestamp from a `Double`.
-    public static let millisecondsSince1970 = ObjectDecoder.DateDecodingStrategy.custom {
-        Date(timeIntervalSince1970: try Double(from: $0) / 1000.0)
+    public static let millisecondsSince1970 = ObjectDecoder.DateDecodingStrategy.custom { decoder in
+        Date(timeIntervalSince1970: try Double(from: decoder) / 1000.0)
     }
     /// Decode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
     @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-    public static let iso8601 = ObjectDecoder.DateDecodingStrategy.custom {
-        guard let date = iso8601Formatter.date(from: try String(from: $0)) else {
-            throw _dataCorrupted(at: $0.codingPath, "Expected date string to be ISO8601-formatted.")
+    public static let iso8601 = ObjectDecoder.DateDecodingStrategy.custom { decoder in
+        guard let date = iso8601Formatter.date(from: try String(from: decoder)) else {
+            throw _dataCorrupted(at: decoder.codingPath, "Expected date string to be ISO8601-formatted.")
         }
         return date
     }
 
     /// Decode the `Date` as a string parsed by the given formatter.
     public static func formatted(_ formatter: DateFormatter) -> ObjectDecoder.DateDecodingStrategy {
-        return .custom {
-            guard let date = formatter.date(from: try String(from: $0)) else {
-                throw _dataCorrupted(at: $0.codingPath, "Date string does not match format expected by formatter.")
+        return .custom { decoder in
+            guard let date = formatter.date(from: try String(from: decoder)) else {
+                throw _dataCorrupted(at: decoder.codingPath, "Date string does not match format expected by formatter.")
             }
             return date
         }
@@ -456,10 +456,7 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Decimal {
-    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<Decimal>.custom {
-        guard let decoder = $0 as? ObjectDecoder.Decoder else {
-            fatalError("unreachable")
-        }
+    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<Decimal>.custom { decoder in
         if let decimal = decoder.object as? Decimal {
             return decimal
         } else {
@@ -480,10 +477,7 @@ extension ObjectDecoder.DecodingStrategy where T == Double {
     public static func convertNonConformingFloatFromString(_ positiveInfinity: String,
                                                            _ negativeInfinity: String,
                                                            _ nan: String) -> ObjectDecoder.DoubleDecodingStrategy {
-        return .custom {
-            guard let decoder = $0 as? ObjectDecoder.Decoder else {
-                fatalError("unreachable")
-            }
+        return .custom { decoder in
             if let double = decoder.object as? Double {
                 return double
             } else if let string = decoder.object as? String {
@@ -512,10 +506,7 @@ extension ObjectDecoder.DecodingStrategy where T == Float {
     public static func convertNonConformingFloatFromString(_ positiveInfinity: String,
                                                            _ negativeInfinity: String,
                                                            _ nan: String) -> ObjectDecoder.FloatDecodingStrategy {
-        return .custom {
-            guard let decoder = $0 as? ObjectDecoder.Decoder else {
-                fatalError("unreachable")
-            }
+        return .custom { decoder in
             if let float = decoder.object as? Float {
                 return float
             } else if let string = decoder.object as? String {
@@ -539,9 +530,9 @@ extension ObjectDecoder.DecodingStrategy where T == Float {
 }
 
 extension ObjectDecoder.DecodingStrategy where T == URL {
-    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<URL>.custom {
-        guard let url = URL(string: try String(from: $0)) else {
-            throw _dataCorrupted(at: $0.codingPath, "Invalid URL string.")
+    public static let compatibleWithJSONDecoder = ObjectDecoder.DecodingStrategy<URL>.custom { decoder in
+        guard let url = URL(string: try String(from: decoder)) else {
+            throw _dataCorrupted(at: decoder.codingPath, "Invalid URL string.")
         }
         return url
     }
