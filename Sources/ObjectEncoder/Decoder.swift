@@ -27,12 +27,7 @@ public struct ObjectDecoder {
 
     public struct DecodingStrategy<T: Decodable> {
         public typealias Closure = (Decoder) throws -> T
-        public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
-            self.identifiers = identifiers
-            self.closure = closure
-        }
-
-        fileprivate let identifiers: [ObjectIdentifier]
+        public init(closure: @escaping Closure) { self.closure = closure }
         fileprivate let closure: Closure
     }
 
@@ -40,21 +35,7 @@ public struct ObjectDecoder {
         var strategies = [ObjectIdentifier: Any]()
         public subscript<T>(type: T.Type) -> DecodingStrategy<T>? {
             get { return strategies[ObjectIdentifier(type)] as? DecodingStrategy<T> }
-            set {
-                if let newValue = newValue {
-                    precondition(newValue.identifiers.contains(ObjectIdentifier(type)))
-                    newValue.identifiers.forEach { strategies[$0] = newValue }
-                } else {
-                    if let strategy = strategies[ObjectIdentifier(type)] as? DecodingStrategy<T> {
-                        strategy.identifiers.forEach { strategies[$0] = nil }
-                    }
-                    strategies[ObjectIdentifier(type)] = nil
-                }
-            }
-        }
-        public subscript<T>(types: [Any.Type]) -> DecodingStrategy<T>? {
-            get { return types.first.map { strategies[ObjectIdentifier($0)] } as? DecodingStrategy<T> }
-            set { types.forEach { strategies[ObjectIdentifier($0)] = newValue } }
+            set { strategies[ObjectIdentifier(type)] = newValue }
         }
     }
 
@@ -179,9 +160,9 @@ private struct _KeyedDecodingContainer<Key: CodingKey> : KeyedDecodingContainerP
     var codingPath: [CodingKey] { return decoder.codingPath }
     var allKeys: [Key] {
         #if swift(>=4.1)
-            return dictionary.keys.compactMap(Key.init)
+        return dictionary.keys.compactMap(Key.init)
         #else
-            return dictionary.keys.flatMap(Key.init)
+        return dictionary.keys.flatMap(Key.init)
         #endif
     }
     func contains(_ key: Key) -> Bool { return dictionary[key.stringValue] != nil }
@@ -389,9 +370,8 @@ extension ObjectDecoder {
 
 extension ObjectDecoder.DecodingStrategy {
     /// Decode the `T` as a custom value decoded by the given closure.
-    public static func custom(_ types: [Any.Type] = [T.self],
-                              _ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<T> {
-        return .init(identifiers: types.map(ObjectIdentifier.init), closure: closure)
+    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<T> {
+        return .init(closure: closure)
     }
 }
 
@@ -406,13 +386,6 @@ extension ObjectDecoder.DecodingStrategy where T == Data {
         }
         return data
     }
-
-    /// Decode the `Data` as a custom value decoded by the given closure.
-    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DataDecodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Data.self, NSData.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Date {
@@ -446,13 +419,6 @@ extension ObjectDecoder.DecodingStrategy where T == Date {
             return date
         }
     }
-
-    /// Decode the `Date` as a custom value decoded by the given closure.
-    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DateDecodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Date.self, NSDate.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Decimal {
@@ -463,12 +429,6 @@ extension ObjectDecoder.DecodingStrategy where T == Decimal {
             return Decimal(try Double(from: decoder))
         }
     }
-
-    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<Decimal> {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Decimal.self, NSDecimalNumber.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Double {
@@ -492,12 +452,6 @@ extension ObjectDecoder.DecodingStrategy where T == Double {
             throw _typeMismatch(at: decoder.codingPath, expectation: Double.self, reality: decoder.object)
         }
     }
-
-    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DoubleDecodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Double.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectDecoder.DecodingStrategy where T == Float {
@@ -521,12 +475,6 @@ extension ObjectDecoder.DecodingStrategy where T == Float {
             throw _typeMismatch(at: decoder.codingPath, expectation: Float.self, reality: decoder.object)
         }
     }
-
-    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.FloatDecodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Float.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectDecoder.DecodingStrategy where T == URL {
@@ -536,12 +484,6 @@ extension ObjectDecoder.DecodingStrategy where T == URL {
         }
         return url
     }
-
-    public static func custom(_ closure: @escaping Closure) -> ObjectDecoder.DecodingStrategy<URL> {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [URL.self, NSURL.self].map(ObjectIdentifier.init)
 }
 
 // swiftlint:disable:this file_length
