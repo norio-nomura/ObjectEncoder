@@ -74,9 +74,9 @@ public struct ObjectDecoder {
 }
 
 extension ObjectDecoder {
-    struct Decoder: Swift.Decoder {
+    public struct Decoder: Swift.Decoder {
 
-        let object: Any
+        public let object: Any
 
         fileprivate typealias Options = ObjectDecoder.Options
         private let options: Options
@@ -91,23 +91,25 @@ extension ObjectDecoder {
             self.codingPath = codingPath
         }
 
-        // MARK: - Swift.Decoder Methods
+        // MARK: - Swift.Decoder properties
 
-        let codingPath: [CodingKey]
-        let userInfo: [CodingUserInfoKey: Any]
+        public let codingPath: [CodingKey]
+        public let userInfo: [CodingUserInfoKey: Any]
     }
 }
 
 extension ObjectDecoder.Decoder {
-    func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
+    // MARK: - Swift.Decoder Methods
+
+    public func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: try cast()))
     }
 
-    func unkeyedContainer() throws -> UnkeyedDecodingContainer {
+    public func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         return _UnkeyedDecodingContainer(decoder: self, wrapping: try cast())
     }
 
-    func singleValueContainer() throws -> SingleValueDecodingContainer { return self }
+    public func singleValueContainer() throws -> SingleValueDecodingContainer { return self }
 
     // MARK: -
 
@@ -307,22 +309,24 @@ extension ObjectDecoder.Decoder: SingleValueDecodingContainer {
 
     // MARK: - Swift.SingleValueDecodingContainer Methods
 
-    func decodeNil() -> Bool { return object is NSNull }
-    func decode(_ type: Bool.Type)   throws -> Bool { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: Int.Type)    throws -> Int { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: Int8.Type)   throws -> Int8 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: Int16.Type)  throws -> Int16 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: Int32.Type)  throws -> Int32 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: Int64.Type)  throws -> Int64 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: UInt.Type)   throws -> UInt { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: UInt8.Type)  throws -> UInt8 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: UInt16.Type) throws -> UInt16 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: UInt32.Type) throws -> UInt32 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: UInt64.Type) throws -> UInt64 { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: Float.Type)  throws -> Float { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: Double.Type) throws -> Double { return try applyStrategy(type) ?? cast() }
-    func decode(_ type: String.Type) throws -> String { return try applyStrategy(type) ?? cast() }
-    func decode<T: Decodable>(_ type: T.Type) throws -> T { return try applyStrategy(type) ?? type.init(from: self) }
+    public func decodeNil() -> Bool { return object is NSNull }
+    public func decode(_ type: Bool.Type)   throws -> Bool { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: Int.Type)    throws -> Int { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: Int8.Type)   throws -> Int8 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: Int16.Type)  throws -> Int16 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: Int32.Type)  throws -> Int32 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: Int64.Type)  throws -> Int64 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: UInt.Type)   throws -> UInt { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: UInt8.Type)  throws -> UInt8 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: UInt16.Type) throws -> UInt16 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: UInt32.Type) throws -> UInt32 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: UInt64.Type) throws -> UInt64 { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: Float.Type)  throws -> Float { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: Double.Type) throws -> Double { return try applyStrategy(type) ?? cast() }
+    public func decode(_ type: String.Type) throws -> String { return try applyStrategy(type) ?? cast() }
+    public func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        return try applyStrategy(type) ?? type.init(from: self)
+    }
 }
 
 // MARK: - ShouldNotBeDecodedFromBool
