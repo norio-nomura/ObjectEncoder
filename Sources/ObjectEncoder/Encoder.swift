@@ -134,11 +134,11 @@ extension ObjectEncoder.Encoder {
         set { object = newValue }
     }
 
-    fileprivate func encoder(for key: CodingKey) -> _ObjectReferencingEncoder {
+    fileprivate func encoder(for key: CodingKey) -> _KeyReferencingEncoder {
         return .init(referencing: self, key: key)
     }
 
-    fileprivate func encoder(at index: Int) -> _ObjectReferencingEncoder {
+    fileprivate func encoder(at index: Int) -> _IndexReferencingEncoder {
         return .init(referencing: self, at: index)
     }
 
@@ -159,31 +159,33 @@ extension ObjectEncoder.Encoder {
     }
 }
 
-class _ObjectReferencingEncoder: ObjectEncoder.Encoder { // swiftlint:disable:this type_name
-    private enum Reference { case mapping(String), sequence(Int) }
-
-    private let encoder: ObjectEncoder.Encoder
-    private let reference: Reference
+private class _KeyReferencingEncoder: ObjectEncoder.Encoder {
+    let encoder: ObjectEncoder.Encoder
+    let key: String
 
     fileprivate init(referencing encoder: ObjectEncoder.Encoder, key: CodingKey) {
         self.encoder = encoder
-        reference = .mapping(key.stringValue)
+        self.key = key.stringValue
         super.init(encoder.options, encoder.userInfo, encoder.codingPath + [key])
     }
 
+    deinit {
+        encoder.dictionary[key] = object
+    }
+}
+
+private class _IndexReferencingEncoder: ObjectEncoder.Encoder {
+    let encoder: ObjectEncoder.Encoder
+    let index: Int
+
     fileprivate init(referencing encoder: ObjectEncoder.Encoder, at index: Int) {
         self.encoder = encoder
-        reference = .sequence(index)
+        self.index = index
         super.init(encoder.options, encoder.userInfo, encoder.codingPath + [_ObjectCodingKey(index: index)])
     }
 
     deinit {
-        switch reference {
-        case .mapping(let key):
-            encoder.dictionary[key] = object
-        case .sequence(let index):
-            encoder.array[index] = object
-        }
+        encoder.array[index] = object
     }
 }
 
@@ -230,7 +232,7 @@ struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol { 
 
     // MARK: -
 
-    private func encoder(for key: CodingKey) -> _ObjectReferencingEncoder { return encoder.encoder(for: key) }
+    private func encoder(for key: CodingKey) -> _KeyReferencingEncoder { return encoder.encoder(for: key) }
 
     private func box<T: Encodable>(_ value: T, for key: CodingKey) throws {
         if let strategy = encoder.options.encodingStrategies[T.self] {
@@ -278,7 +280,7 @@ struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer { // swiftlint:disabl
 
     // MARK: -
 
-    private var currentEncoder: _ObjectReferencingEncoder {
+    private var currentEncoder: _IndexReferencingEncoder {
         defer { encoder.array.append("") }
         return encoder.encoder(at: count)
     }
