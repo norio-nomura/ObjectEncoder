@@ -76,8 +76,8 @@ public struct ObjectEncoder {
 }
 
 extension ObjectEncoder {
-    class Encoder: Swift.Encoder {
-        fileprivate var object: Any = [:]
+    public class Encoder: Swift.Encoder {
+        public final var object: Any = [:]
 
         fileprivate typealias Options = ObjectEncoder.Options
         fileprivate let options: Options
@@ -88,15 +88,17 @@ extension ObjectEncoder {
             self.codingPath = codingPath
         }
 
-        // MARK: - Swift.Encoder Methods
+        // MARK: - Swift.Encoder properties
 
-        let codingPath: [CodingKey]
-        let userInfo: [CodingUserInfoKey: Any]
+        public final let codingPath: [CodingKey]
+        public final let userInfo: [CodingUserInfoKey: Any]
     }
 }
 
 extension ObjectEncoder.Encoder {
-    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> {
+    // MARK: - Swift.Encoder methods
+
+    public final func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> {
         if canEncodeNewValue {
             object = [:]
         } else {
@@ -108,7 +110,7 @@ extension ObjectEncoder.Encoder {
         return .init(_KeyedEncodingContainer<Key>(referencing: self))
     }
 
-    func unkeyedContainer() -> UnkeyedEncodingContainer {
+    public final func unkeyedContainer() -> UnkeyedEncodingContainer {
         if canEncodeNewValue {
             object = []
         } else {
@@ -120,7 +122,7 @@ extension ObjectEncoder.Encoder {
         return _UnkeyedEncodingContainer(referencing: self)
     }
 
-    func singleValueContainer() -> SingleValueEncodingContainer { return self }
+    public final func singleValueContainer() -> SingleValueEncodingContainer { return self }
 
     // MARK: -
 
@@ -267,23 +269,23 @@ extension ObjectEncoder.Encoder: SingleValueEncodingContainer {
 
     // MARK: - Swift.SingleValueEncodingContainer Methods
 
-    func encodeNil()             throws { assertCanEncodeNewValue(); object = NSNull() }
-    func encode(_ value: Bool)   throws { try box(value) }
-    func encode(_ value: Int)    throws { try box(value) }
-    func encode(_ value: Int8)   throws { try box(value) }
-    func encode(_ value: Int16)  throws { try box(value) }
-    func encode(_ value: Int32)  throws { try box(value) }
-    func encode(_ value: Int64)  throws { try box(value) }
-    func encode(_ value: UInt)   throws { try box(value) }
-    func encode(_ value: UInt8)  throws { try box(value) }
-    func encode(_ value: UInt16) throws { try box(value) }
-    func encode(_ value: UInt32) throws { try box(value) }
-    func encode(_ value: UInt64) throws { try box(value) }
-    func encode(_ value: Float)  throws { try box(value) }
-    func encode(_ value: Double) throws { try box(value) }
-    func encode(_ value: String) throws { try box(value) }
+    public final func encodeNil()             throws { assertCanEncodeNewValue(); object = NSNull() }
+    public final func encode(_ value: Bool)   throws { try box(value) }
+    public final func encode(_ value: Int)    throws { try box(value) }
+    public final func encode(_ value: Int8)   throws { try box(value) }
+    public final func encode(_ value: Int16)  throws { try box(value) }
+    public final func encode(_ value: Int32)  throws { try box(value) }
+    public final func encode(_ value: Int64)  throws { try box(value) }
+    public final func encode(_ value: UInt)   throws { try box(value) }
+    public final func encode(_ value: UInt8)  throws { try box(value) }
+    public final func encode(_ value: UInt16) throws { try box(value) }
+    public final func encode(_ value: UInt32) throws { try box(value) }
+    public final func encode(_ value: UInt64) throws { try box(value) }
+    public final func encode(_ value: Float)  throws { try box(value) }
+    public final func encode(_ value: Double) throws { try box(value) }
+    public final func encode(_ value: String) throws { try box(value) }
 
-    func encode<T>(_ value: T) throws where T: Encodable {
+    public final func encode<T>(_ value: T) throws where T: Encodable {
         assertCanEncodeNewValue()
         if try !applyStrategy(value) {
             try value.encode(to: self)
