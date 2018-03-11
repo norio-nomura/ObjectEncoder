@@ -180,9 +180,7 @@ private class _IndexReferencingEncoder: ObjectEncoder.Encoder {
     }
 }
 
-private struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol {
-    typealias Key = K
-
+private struct _KeyedEncodingContainer<Key: CodingKey> : KeyedEncodingContainerProtocol {
     private let encoder: ObjectEncoder.Encoder
 
     private func encoder(for key: CodingKey) -> _KeyReferencingEncoder { return encoder.encoder(for: key) }
