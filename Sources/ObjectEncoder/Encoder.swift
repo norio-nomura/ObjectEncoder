@@ -12,7 +12,7 @@ public struct ObjectEncoder {
     public init() {}
     public func encode<T>(_ value: T, userInfo: [CodingUserInfoKey: Any] = [:]) throws -> Any where T: Swift.Encodable {
         do {
-            let encoder = _Encoder(options, userInfo)
+            let encoder = ObjectEncoder.Encoder(options, userInfo)
             var container = encoder.singleValueContainer()
             try container.encode(value)
             return encoder.object
@@ -28,7 +28,7 @@ public struct ObjectEncoder {
     }
 
     public struct EncodingStrategy<T: Encodable> {
-        public typealias Closure = (T, Encoder) throws -> Void
+        public typealias Closure = (T, Swift.Encoder) throws -> Void
         public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
             self.identifiers = identifiers
             self.closure = closure
@@ -75,29 +75,27 @@ public struct ObjectEncoder {
     fileprivate var options = Options()
 }
 
-class _Encoder: Swift.Encoder { // swiftlint:disable:this type_name
+extension ObjectEncoder {
+    class Encoder: Swift.Encoder {
+        fileprivate var object: Any = [:]
 
-    struct Unused {
-        private init() {}
-        fileprivate static let unused = Unused()
+        fileprivate typealias Options = ObjectEncoder.Options
+        fileprivate let options: Options
+
+        fileprivate init(_ options: Options, _ userInfo: [CodingUserInfoKey: Any], _ codingPath: [CodingKey] = []) {
+            self.options = options
+            self.userInfo = userInfo
+            self.codingPath = codingPath
+        }
+
+        // MARK: - Swift.Encoder Methods
+
+        let codingPath: [CodingKey]
+        let userInfo: [CodingUserInfoKey: Any]
     }
+}
 
-    fileprivate var object: Any = [:]
-
-    fileprivate typealias Options = ObjectEncoder.Options
-    fileprivate let options: Options
-
-    fileprivate init(_ options: Options, _ userInfo: [CodingUserInfoKey: Any] = [:], _ codingPath: [CodingKey] = []) {
-        self.options = options
-        self.userInfo = userInfo
-        self.codingPath = codingPath
-    }
-
-    // MARK: - Swift.Encoder Methods
-
-    let codingPath: [CodingKey]
-    let userInfo: [CodingUserInfoKey: Any]
-
+extension ObjectEncoder.Encoder {
     func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> {
         if canEncodeNewValue {
             object = [:]
@@ -136,21 +134,12 @@ class _Encoder: Swift.Encoder { // swiftlint:disable:this type_name
         set { object = newValue }
     }
 
-    fileprivate func encoder(for key: CodingKey) -> _ObjectReferencingEncoder {
+    fileprivate func encoder(for key: CodingKey) -> _KeyReferencingEncoder {
         return .init(referencing: self, key: key)
     }
 
-    fileprivate func encoder(at index: Int) -> _ObjectReferencingEncoder {
+    fileprivate func encoder(at index: Int) -> _IndexReferencingEncoder {
         return .init(referencing: self, at: index)
-    }
-
-    private func box<T: Encodable>(_ value: T) throws {
-        assertCanEncodeNewValue()
-        if let strategy = options.encodingStrategies[T.self] {
-            try strategy.closure(value, self)
-        } else {
-            object = value
-        }
     }
 
     private var canEncodeNewValue: Bool {
@@ -161,61 +150,63 @@ class _Encoder: Swift.Encoder { // swiftlint:disable:this type_name
     }
 }
 
-class _ObjectReferencingEncoder: _Encoder { // swiftlint:disable:this type_name
-    private enum Reference { case mapping(String), sequence(Int) }
+private class _KeyReferencingEncoder: ObjectEncoder.Encoder {
+    let encoder: ObjectEncoder.Encoder
+    let key: String
 
-    private let encoder: _Encoder
-    private let reference: Reference
-
-    fileprivate init(referencing encoder: _Encoder, key: CodingKey) {
+    fileprivate init(referencing encoder: ObjectEncoder.Encoder, key: CodingKey) {
         self.encoder = encoder
-        reference = .mapping(key.stringValue)
+        self.key = key.stringValue
         super.init(encoder.options, encoder.userInfo, encoder.codingPath + [key])
     }
 
-    fileprivate init(referencing encoder: _Encoder, at index: Int) {
+    deinit {
+        encoder.dictionary[key] = object
+    }
+}
+
+private class _IndexReferencingEncoder: ObjectEncoder.Encoder {
+    let encoder: ObjectEncoder.Encoder
+    let index: Int
+
+    fileprivate init(referencing encoder: ObjectEncoder.Encoder, at index: Int) {
         self.encoder = encoder
-        reference = .sequence(index)
+        self.index = index
         super.init(encoder.options, encoder.userInfo, encoder.codingPath + [_ObjectCodingKey(index: index)])
     }
 
     deinit {
-        switch reference {
-        case .mapping(let key):
-            encoder.dictionary[key] = object
-        case .sequence(let index):
-            encoder.array[index] = object
-        }
+        encoder.array[index] = object
     }
 }
 
-struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol { // swiftlint:disable:this type_name
-    typealias Key = K
+private struct _KeyedEncodingContainer<Key: CodingKey> : KeyedEncodingContainerProtocol {
+    private let encoder: ObjectEncoder.Encoder
 
-    private let encoder: _Encoder
+    private func encoder(for key: CodingKey) -> _KeyReferencingEncoder { return encoder.encoder(for: key) }
 
-    fileprivate init(referencing encoder: _Encoder) {
+    init(referencing encoder: ObjectEncoder.Encoder) {
         self.encoder = encoder
     }
 
     // MARK: - Swift.KeyedEncodingContainerProtocol Methods
 
     var codingPath: [CodingKey] { return encoder.codingPath }
-    func encodeNil(forKey key: Key)               throws { encoder.dictionary[key.stringValue] = NSNull() }
-    func encode(_ value: Bool, forKey key: Key)   throws { try box(value, for: key) }
-    func encode(_ value: Int, forKey key: Key)    throws { try box(value, for: key) }
-    func encode(_ value: Int8, forKey key: Key)   throws { try box(value, for: key) }
-    func encode(_ value: Int16, forKey key: Key)  throws { try box(value, for: key) }
-    func encode(_ value: Int32, forKey key: Key)  throws { try box(value, for: key) }
-    func encode(_ value: Int64, forKey key: Key)  throws { try box(value, for: key) }
-    func encode(_ value: UInt, forKey key: Key)   throws { try box(value, for: key) }
-    func encode(_ value: UInt8, forKey key: Key)  throws { try box(value, for: key) }
-    func encode(_ value: UInt16, forKey key: Key) throws { try box(value, for: key) }
-    func encode(_ value: UInt32, forKey key: Key) throws { try box(value, for: key) }
-    func encode(_ value: UInt64, forKey key: Key) throws { try box(value, for: key) }
-    func encode(_ value: Float, forKey key: Key)  throws { try box(value, for: key) }
-    func encode(_ value: Double, forKey key: Key) throws { try box(value, for: key) }
-    func encode(_ value: String, forKey key: Key) throws { try box(value, for: key) }
+    func encodeNil(forKey key: Key)               throws { try encoder(for: key).encodeNil() }
+    func encode(_ value: Bool, forKey key: Key)   throws { try encoder(for: key).encode(value) }
+    func encode(_ value: Int, forKey key: Key)    throws { try encoder(for: key).encode(value) }
+    func encode(_ value: Int8, forKey key: Key)   throws { try encoder(for: key).encode(value) }
+    func encode(_ value: Int16, forKey key: Key)  throws { try encoder(for: key).encode(value) }
+    func encode(_ value: Int32, forKey key: Key)  throws { try encoder(for: key).encode(value) }
+    func encode(_ value: Int64, forKey key: Key)  throws { try encoder(for: key).encode(value) }
+    func encode(_ value: UInt, forKey key: Key)   throws { try encoder(for: key).encode(value) }
+    func encode(_ value: UInt8, forKey key: Key)  throws { try encoder(for: key).encode(value) }
+    func encode(_ value: UInt16, forKey key: Key) throws { try encoder(for: key).encode(value) }
+    func encode(_ value: UInt32, forKey key: Key) throws { try encoder(for: key).encode(value) }
+    func encode(_ value: UInt64, forKey key: Key) throws { try encoder(for: key).encode(value) }
+    func encode(_ value: Float, forKey key: Key)  throws { try encoder(for: key).encode(value) }
+    func encode(_ value: Double, forKey key: Key) throws { try encoder(for: key).encode(value) }
+    func encode(_ value: String, forKey key: Key) throws { try encoder(for: key).encode(value) }
     func encode<T>(_ value: T, forKey key: Key)   throws where T: Encodable { try encoder(for: key).encode(value) }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type,
@@ -229,24 +220,17 @@ struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol { 
 
     func superEncoder() -> Encoder { return encoder(for: _ObjectCodingKey.super) }
     func superEncoder(forKey key: Key) -> Encoder { return encoder(for: key) }
-
-    // MARK: -
-
-    private func encoder(for key: CodingKey) -> _ObjectReferencingEncoder { return encoder.encoder(for: key) }
-
-    private func box<T: Encodable>(_ value: T, for key: CodingKey) throws {
-        if let strategy = encoder.options.encodingStrategies[T.self] {
-            try strategy.closure(value, encoder(for: key))
-        } else {
-            encoder.dictionary[key.stringValue] = value
-        }
-    }
 }
 
-struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer { // swiftlint:disable:this type_name
-    private let encoder: _Encoder
+private struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer {
+    private let encoder: ObjectEncoder.Encoder
 
-    fileprivate init(referencing encoder: _Encoder) {
+    private var currentEncoder: _IndexReferencingEncoder {
+        defer { encoder.array.append("") }
+        return encoder.encoder(at: count)
+    }
+
+    init(referencing encoder: ObjectEncoder.Encoder) {
         self.encoder = encoder
     }
 
@@ -254,21 +238,21 @@ struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer { // swiftlint:disabl
 
     var codingPath: [CodingKey] { return encoder.codingPath }
     var count: Int { return encoder.array.count }
-    func encodeNil()             throws { encoder.array.append(NSNull()) }
-    func encode(_ value: Bool)   throws { try box(value) }
-    func encode(_ value: Int)    throws { try box(value) }
-    func encode(_ value: Int8)   throws { try box(value) }
-    func encode(_ value: Int16)  throws { try box(value) }
-    func encode(_ value: Int32)  throws { try box(value) }
-    func encode(_ value: Int64)  throws { try box(value) }
-    func encode(_ value: UInt)   throws { try box(value) }
-    func encode(_ value: UInt8)  throws { try box(value) }
-    func encode(_ value: UInt16) throws { try box(value) }
-    func encode(_ value: UInt32) throws { try box(value) }
-    func encode(_ value: UInt64) throws { try box(value) }
-    func encode(_ value: Float)  throws { try box(value) }
-    func encode(_ value: Double) throws { try box(value) }
-    func encode(_ value: String) throws { try box(value) }
+    func encodeNil()             throws { try currentEncoder.encodeNil() }
+    func encode(_ value: Bool)   throws { try currentEncoder.encode(value) }
+    func encode(_ value: Int)    throws { try currentEncoder.encode(value) }
+    func encode(_ value: Int8)   throws { try currentEncoder.encode(value) }
+    func encode(_ value: Int16)  throws { try currentEncoder.encode(value) }
+    func encode(_ value: Int32)  throws { try currentEncoder.encode(value) }
+    func encode(_ value: Int64)  throws { try currentEncoder.encode(value) }
+    func encode(_ value: UInt)   throws { try currentEncoder.encode(value) }
+    func encode(_ value: UInt8)  throws { try currentEncoder.encode(value) }
+    func encode(_ value: UInt16) throws { try currentEncoder.encode(value) }
+    func encode(_ value: UInt32) throws { try currentEncoder.encode(value) }
+    func encode(_ value: UInt64) throws { try currentEncoder.encode(value) }
+    func encode(_ value: Float)  throws { try currentEncoder.encode(value) }
+    func encode(_ value: Double) throws { try currentEncoder.encode(value) }
+    func encode(_ value: String) throws { try currentEncoder.encode(value) }
     func encode<T>(_ value: T)   throws where T: Encodable { try currentEncoder.encode(value) }
 
     func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> {
@@ -277,24 +261,9 @@ struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer { // swiftlint:disabl
 
     func nestedUnkeyedContainer() -> UnkeyedEncodingContainer { return currentEncoder.unkeyedContainer() }
     func superEncoder() -> Encoder { return currentEncoder }
-
-    // MARK: -
-
-    private var currentEncoder: _ObjectReferencingEncoder {
-        defer { encoder.array.append("") }
-        return encoder.encoder(at: count)
-    }
-
-    private func box<T: Encodable>(_ value: T) throws {
-        if let strategy = encoder.options.encodingStrategies[T.self] {
-            try strategy.closure(value, currentEncoder)
-        } else {
-            encoder.array.append(value)
-        }
-    }
 }
 
-extension _Encoder: SingleValueEncodingContainer {
+extension ObjectEncoder.Encoder: SingleValueEncodingContainer {
 
     // MARK: - Swift.SingleValueEncodingContainer Methods
 
@@ -316,14 +285,27 @@ extension _Encoder: SingleValueEncodingContainer {
 
     func encode<T>(_ value: T) throws where T: Encodable {
         assertCanEncodeNewValue()
-        if let strategy = options.encodingStrategies[T.self] {
-            try strategy.closure(value, self)
-        } else {
+        if try !applyStrategy(value) {
             try value.encode(to: self)
         }
     }
 
     // MARK: -
+
+    private func applyStrategy<T: Encodable>(_ value: T) throws -> Bool {
+        if let strategy = options.encodingStrategies[T.self] {
+            try strategy.closure(value, self)
+            return true
+        }
+        return false
+    }
+
+    private func box<T: Encodable>(_ value: T) throws {
+        assertCanEncodeNewValue()
+        if try !applyStrategy(value) {
+            object = value
+        }
+    }
 
     /// Asserts that a single value can be encoded at the current coding path
     /// (i.e. that one has not already been encoded through this container).
@@ -475,7 +457,7 @@ extension ObjectEncoder.EncodingStrategy where T == Date {
 
 extension ObjectEncoder.EncodingStrategy where T == Decimal {
     public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<Decimal>.custom {
-        guard let encoder = $1 as? _Encoder else {
+        guard let encoder = $1 as? ObjectEncoder.Encoder else {
             fatalError("unreachable")
         }
         encoder.object = NSDecimalNumber(decimal: $0)
@@ -490,7 +472,7 @@ extension ObjectEncoder.EncodingStrategy where T == Decimal {
 
 extension ObjectEncoder.EncodingStrategy where T == Double {
     public static let throwOnNonConformingFloat = ObjectEncoder.DoubleEncodingStrategy.custom {
-        guard let encoder = $1 as? _Encoder else {
+        guard let encoder = $1 as? ObjectEncoder.Encoder else {
             fatalError("unreachable")
         }
         guard !$0.isInfinite && !$0.isNaN else {
@@ -503,7 +485,7 @@ extension ObjectEncoder.EncodingStrategy where T == Double {
                                                          _ negativeInfinity: String,
                                                          _ nan: String) -> ObjectEncoder.DoubleEncodingStrategy {
         return .custom {
-            guard let encoder = $1 as? _Encoder else {
+            guard let encoder = $1 as? ObjectEncoder.Encoder else {
                 fatalError("unreachable")
             }
             if $0 == .infinity {
@@ -527,7 +509,7 @@ extension ObjectEncoder.EncodingStrategy where T == Double {
 
 extension ObjectEncoder.EncodingStrategy where T == Float {
     public static let throwOnNonConformingFloat = ObjectEncoder.FloatEncodingStrategy.custom {
-        guard let encoder = $1 as? _Encoder else {
+        guard let encoder = $1 as? ObjectEncoder.Encoder else {
             fatalError("unreachable")
         }
         guard !$0.isInfinite && !$0.isNaN else {
@@ -540,7 +522,7 @@ extension ObjectEncoder.EncodingStrategy where T == Float {
                                                          _ negativeInfinity: String,
                                                          _ nan: String) -> ObjectEncoder.FloatEncodingStrategy {
         return .custom {
-            guard let encoder = $1 as? _Encoder else {
+            guard let encoder = $1 as? ObjectEncoder.Encoder else {
                 fatalError("unreachable")
             }
             if $0 == .infinity {
