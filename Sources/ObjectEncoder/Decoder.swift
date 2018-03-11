@@ -162,14 +162,14 @@ extension ObjectDecoder.Decoder {
     }
 }
 
-struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { // swiftlint:disable:this type_name
+private struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol {
 
     typealias Key = K
 
     private let decoder: ObjectDecoder.Decoder
     private let dictionary: [String: Any]
 
-    fileprivate init(decoder: ObjectDecoder.Decoder, wrapping dictionary: [String: Any]) {
+    init(decoder: ObjectDecoder.Decoder, wrapping dictionary: [String: Any]) {
         self.decoder = decoder
         self.dictionary = dictionary
     }
@@ -232,12 +232,12 @@ struct _KeyedDecodingContainer<K: CodingKey> : KeyedDecodingContainerProtocol { 
     }
 }
 
-struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer { // swiftlint:disable:this type_name
+private struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer {
 
     private let decoder: ObjectDecoder.Decoder
     private let array: [Any]
 
-    fileprivate init(decoder: ObjectDecoder.Decoder, wrapping array: [Any]) {
+    init(decoder: ObjectDecoder.Decoder, wrapping array: [Any]) {
         self.decoder = decoder
         self.array = array
         self.currentIndex = 0
