@@ -29,12 +29,7 @@ public struct ObjectEncoder {
 
     public struct EncodingStrategy<T: Encodable> {
         public typealias Closure = (T, Encoder) throws -> Void
-        public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
-            self.identifiers = identifiers
-            self.closure = closure
-        }
-
-        fileprivate let identifiers: [ObjectIdentifier]
+        public init(closure: @escaping Closure) { self.closure = closure }
         fileprivate let closure: Closure
     }
 
@@ -42,21 +37,7 @@ public struct ObjectEncoder {
         var strategies = [ObjectIdentifier: Any]()
         public subscript<T>(type: T.Type) -> EncodingStrategy<T>? {
             get { return strategies[ObjectIdentifier(type)] as? EncodingStrategy<T> }
-            set {
-                if let newValue = newValue {
-                    precondition(newValue.identifiers.contains(ObjectIdentifier(type)))
-                    newValue.identifiers.forEach { strategies[$0] = newValue }
-                } else {
-                    if let strategy = strategies[ObjectIdentifier(type)] as? EncodingStrategy<T> {
-                        strategy.identifiers.forEach { strategies[$0] = nil }
-                    }
-                    strategies[ObjectIdentifier(type)] = nil
-                }
-            }
-        }
-        public subscript<T>(types: [Any.Type]) -> EncodingStrategy<T>? {
-            get { return types.first.map { strategies[ObjectIdentifier($0)] } as? EncodingStrategy<T> }
-            set { types.forEach { strategies[ObjectIdentifier($0)] = newValue } }
+            set { strategies[ObjectIdentifier(type)] = newValue }
         }
     }
 
@@ -382,9 +363,8 @@ extension ObjectEncoder.EncodingStrategy {
     ///
     /// If the closure fails to encode a value into the given encoder,
     /// the encoder will encode an empty automatic container in its place.
-    public static func custom(_ types: [Any.Type] = [T.self],
-                              _ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<T> {
-        return .init(identifiers: types.map(ObjectIdentifier.init), closure: closure)
+    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<T> {
+        return .init(closure: closure)
     }
 }
 
@@ -396,16 +376,6 @@ extension ObjectEncoder.EncodingStrategy where T == Data {
     public static let base64 = ObjectEncoder.DataEncodingStrategy.custom {
         try $0.base64EncodedString().encode(to: $1)
     }
-
-    /// Encode the `Data` as a custom value encoded by the given closure.
-    ///
-    /// If the closure fails to encode a value into the given encoder,
-    /// the encoder will encode an empty automatic container in its place.
-    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DataEncodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Data.self, NSData.self].map(ObjectIdentifier.init)
 }
 
 @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
@@ -445,28 +415,12 @@ extension ObjectEncoder.EncodingStrategy where T == Date {
             try container.encode(formatter.string(from: date))
         }
     }
-
-    /// Encode the `Date` as a custom value encoded by the given closure.
-    ///
-    /// If the closure fails to encode a value into the given encoder,
-    /// the encoder will encode an empty automatic container in its place.
-    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DateEncodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Date.self, NSDate.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectEncoder.EncodingStrategy where T == Decimal {
     public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<Decimal>.custom { decimal, encoder in
         encoder.object = NSDecimalNumber(decimal: decimal)
     }
-
-    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<Decimal> {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Decimal.self, NSDecimalNumber.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectEncoder.EncodingStrategy where T == Double {
@@ -492,12 +446,6 @@ extension ObjectEncoder.EncodingStrategy where T == Double {
             }
         }
     }
-
-    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.DoubleEncodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Double.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectEncoder.EncodingStrategy where T == Float {
@@ -523,12 +471,6 @@ extension ObjectEncoder.EncodingStrategy where T == Float {
             }
         }
     }
-
-    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.FloatEncodingStrategy {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [Float.self].map(ObjectIdentifier.init)
 }
 
 extension ObjectEncoder.EncodingStrategy where T == URL {
@@ -536,10 +478,6 @@ extension ObjectEncoder.EncodingStrategy where T == URL {
         var container = encoder.singleValueContainer()
         try container.encode(url.absoluteString)
     }
+}
 
-    public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<URL> {
-        return .init(identifiers: identifiers, closure: closure)
-    }
-
-    private static let identifiers = [URL.self, NSURL.self].map(ObjectIdentifier.init)
-} // swiftlint:disable:this file_length
+// swiftlint:disable:this file_length
