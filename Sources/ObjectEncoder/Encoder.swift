@@ -180,12 +180,14 @@ private class _IndexReferencingEncoder: ObjectEncoder.Encoder {
     }
 }
 
-struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol { // swiftlint:disable:this type_name
+private struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol {
     typealias Key = K
 
     private let encoder: ObjectEncoder.Encoder
 
-    fileprivate init(referencing encoder: ObjectEncoder.Encoder) {
+    private func encoder(for key: CodingKey) -> _KeyReferencingEncoder { return encoder.encoder(for: key) }
+
+    init(referencing encoder: ObjectEncoder.Encoder) {
         self.encoder = encoder
     }
 
@@ -220,16 +222,17 @@ struct _KeyedEncodingContainer<K: CodingKey> : KeyedEncodingContainerProtocol { 
 
     func superEncoder() -> Encoder { return encoder(for: _ObjectCodingKey.super) }
     func superEncoder(forKey key: Key) -> Encoder { return encoder(for: key) }
-
-    // MARK: -
-
-    private func encoder(for key: CodingKey) -> _KeyReferencingEncoder { return encoder.encoder(for: key) }
 }
 
-struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer { // swiftlint:disable:this type_name
+private struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer {
     private let encoder: ObjectEncoder.Encoder
 
-    fileprivate init(referencing encoder: ObjectEncoder.Encoder) {
+    private var currentEncoder: _IndexReferencingEncoder {
+        defer { encoder.array.append("") }
+        return encoder.encoder(at: count)
+    }
+
+    init(referencing encoder: ObjectEncoder.Encoder) {
         self.encoder = encoder
     }
 
@@ -260,13 +263,6 @@ struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer { // swiftlint:disabl
 
     func nestedUnkeyedContainer() -> UnkeyedEncodingContainer { return currentEncoder.unkeyedContainer() }
     func superEncoder() -> Encoder { return currentEncoder }
-
-    // MARK: -
-
-    private var currentEncoder: _IndexReferencingEncoder {
-        defer { encoder.array.append("") }
-        return encoder.encoder(at: count)
-    }
 }
 
 extension ObjectEncoder.Encoder: SingleValueEncodingContainer {
