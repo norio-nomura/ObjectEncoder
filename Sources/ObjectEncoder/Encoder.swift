@@ -28,7 +28,7 @@ public struct ObjectEncoder {
     }
 
     public struct EncodingStrategy<T: Encodable> {
-        public typealias Closure = (T, Swift.Encoder) throws -> Void
+        public typealias Closure = (T, Encoder) throws -> Void
         public init(identifiers: [ObjectIdentifier], closure: @escaping Closure) {
             self.identifiers = identifiers
             self.closure = closure
@@ -420,29 +420,29 @@ extension ObjectEncoder.EncodingStrategy where T == Date {
     public static let deferredToDate: ObjectEncoder.DateEncodingStrategy? = nil
 
     /// Encode the `Date` as a UNIX timestamp (as a `Double`).
-    public static let secondsSince1970 = ObjectEncoder.DateEncodingStrategy.custom {
-        var container = $1.singleValueContainer()
-        try container.encode($0.timeIntervalSince1970)
+    public static let secondsSince1970 = ObjectEncoder.DateEncodingStrategy.custom { date, encoder in
+        var container = encoder.singleValueContainer()
+        try container.encode(date.timeIntervalSince1970)
     }
 
     /// Encode the `Date` as UNIX millisecond timestamp (as a `Double`).
-    public static let millisecondsSince1970 = ObjectEncoder.DateEncodingStrategy.custom {
-        var container = $1.singleValueContainer()
-        try container.encode(1000.0 * $0.timeIntervalSince1970)
+    public static let millisecondsSince1970 = ObjectEncoder.DateEncodingStrategy.custom { date, encoder in
+        var container = encoder.singleValueContainer()
+        try container.encode(1000.0 * date.timeIntervalSince1970)
     }
 
     /// Encode the `Date` as an ISO-8601-formatted string (in RFC 3339 format).
     @available(OSX 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-    public static let iso8601 = ObjectEncoder.DateEncodingStrategy.custom {
-        var container = $1.singleValueContainer()
-        try container.encode(iso8601Formatter.string(from: $0))
+    public static let iso8601 = ObjectEncoder.DateEncodingStrategy.custom { date, encoder in
+        var container = encoder.singleValueContainer()
+        try container.encode(iso8601Formatter.string(from: date))
     }
 
     /// Encode the `Date` as a string formatted by the given formatter.
     public static func formatted(_ formatter: DateFormatter) -> ObjectEncoder.DateEncodingStrategy {
-        return .custom {
-            var container = $1.singleValueContainer()
-            try container.encode(formatter.string(from: $0))
+        return .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(formatter.string(from: date))
         }
     }
 
@@ -458,11 +458,8 @@ extension ObjectEncoder.EncodingStrategy where T == Date {
 }
 
 extension ObjectEncoder.EncodingStrategy where T == Decimal {
-    public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<Decimal>.custom {
-        guard let encoder = $1 as? ObjectEncoder.Encoder else {
-            fatalError("unreachable")
-        }
-        encoder.object = NSDecimalNumber(decimal: $0)
+    public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<Decimal>.custom { decimal, encoder in
+        encoder.object = NSDecimalNumber(decimal: decimal)
     }
 
     public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<Decimal> {
@@ -473,31 +470,25 @@ extension ObjectEncoder.EncodingStrategy where T == Decimal {
 }
 
 extension ObjectEncoder.EncodingStrategy where T == Double {
-    public static let throwOnNonConformingFloat = ObjectEncoder.DoubleEncodingStrategy.custom {
-        guard let encoder = $1 as? ObjectEncoder.Encoder else {
-            fatalError("unreachable")
+    public static let throwOnNonConformingFloat = ObjectEncoder.DoubleEncodingStrategy.custom { double, encoder in
+        guard !double.isInfinite && !double.isNaN else {
+            throw _invalidFloatingPointValue(double, at: encoder.codingPath)
         }
-        guard !$0.isInfinite && !$0.isNaN else {
-            throw _invalidFloatingPointValue($0, at: encoder.codingPath)
-        }
-        encoder.object = NSNumber(value: $0)
+        encoder.object = NSNumber(value: double)
     }
 
     public static func convertNonConformingFloatToString(_ positiveInfinity: String,
                                                          _ negativeInfinity: String,
                                                          _ nan: String) -> ObjectEncoder.DoubleEncodingStrategy {
-        return .custom {
-            guard let encoder = $1 as? ObjectEncoder.Encoder else {
-                fatalError("unreachable")
-            }
-            if $0 == .infinity {
+        return .custom { double, encoder in
+            if double == .infinity {
                 encoder.object = positiveInfinity
-            } else if $0 == -.infinity {
+            } else if double == -.infinity {
                 encoder.object = negativeInfinity
-            } else if $0.isNaN {
+            } else if double.isNaN {
                 encoder.object = nan
             } else {
-                encoder.object = NSNumber(value: $0)
+                encoder.object = NSNumber(value: double)
             }
         }
     }
@@ -510,31 +501,25 @@ extension ObjectEncoder.EncodingStrategy where T == Double {
 }
 
 extension ObjectEncoder.EncodingStrategy where T == Float {
-    public static let throwOnNonConformingFloat = ObjectEncoder.FloatEncodingStrategy.custom {
-        guard let encoder = $1 as? ObjectEncoder.Encoder else {
-            fatalError("unreachable")
+    public static let throwOnNonConformingFloat = ObjectEncoder.FloatEncodingStrategy.custom { float, encoder in
+        guard !float.isInfinite && !float.isNaN else {
+            throw _invalidFloatingPointValue(float, at: encoder.codingPath)
         }
-        guard !$0.isInfinite && !$0.isNaN else {
-            throw _invalidFloatingPointValue($0, at: encoder.codingPath)
-        }
-        encoder.object = NSNumber(value: $0)
+        encoder.object = NSNumber(value: float)
     }
 
     public static func convertNonConformingFloatToString(_ positiveInfinity: String,
                                                          _ negativeInfinity: String,
                                                          _ nan: String) -> ObjectEncoder.FloatEncodingStrategy {
-        return .custom {
-            guard let encoder = $1 as? ObjectEncoder.Encoder else {
-                fatalError("unreachable")
-            }
-            if $0 == .infinity {
+        return .custom { float, encoder in
+            if float == .infinity {
                 encoder.object = positiveInfinity
-            } else if $0 == -.infinity {
+            } else if float == -.infinity {
                 encoder.object = negativeInfinity
-            } else if $0.isNaN {
+            } else if float.isNaN {
                 encoder.object = nan
             } else {
-                encoder.object = NSNumber(value: $0)
+                encoder.object = NSNumber(value: float)
             }
         }
     }
@@ -547,9 +532,9 @@ extension ObjectEncoder.EncodingStrategy where T == Float {
 }
 
 extension ObjectEncoder.EncodingStrategy where T == URL {
-    public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<URL>.custom {
-        var container = $1.singleValueContainer()
-        try container.encode($0.absoluteString)
+    public static let compatibleWithJSONEncoder = ObjectEncoder.EncodingStrategy<URL>.custom { url, encoder in
+        var container = encoder.singleValueContainer()
+        try container.encode(url.absoluteString)
     }
 
     public static func custom(_ closure: @escaping Closure) -> ObjectEncoder.EncodingStrategy<URL> {
