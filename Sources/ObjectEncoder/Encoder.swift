@@ -175,22 +175,9 @@ private struct _KeyedEncodingContainer<Key: CodingKey> : KeyedEncodingContainerP
     // MARK: - Swift.KeyedEncodingContainerProtocol Methods
 
     var codingPath: [CodingKey] { return encoder.codingPath }
-    func encodeNil(forKey key: Key)               throws { try encoder(for: key).encodeNil() }
-    func encode(_ value: Bool, forKey key: Key)   throws { try encoder(for: key).encode(value) }
-    func encode(_ value: Int, forKey key: Key)    throws { try encoder(for: key).encode(value) }
-    func encode(_ value: Int8, forKey key: Key)   throws { try encoder(for: key).encode(value) }
-    func encode(_ value: Int16, forKey key: Key)  throws { try encoder(for: key).encode(value) }
-    func encode(_ value: Int32, forKey key: Key)  throws { try encoder(for: key).encode(value) }
-    func encode(_ value: Int64, forKey key: Key)  throws { try encoder(for: key).encode(value) }
-    func encode(_ value: UInt, forKey key: Key)   throws { try encoder(for: key).encode(value) }
-    func encode(_ value: UInt8, forKey key: Key)  throws { try encoder(for: key).encode(value) }
-    func encode(_ value: UInt16, forKey key: Key) throws { try encoder(for: key).encode(value) }
-    func encode(_ value: UInt32, forKey key: Key) throws { try encoder(for: key).encode(value) }
-    func encode(_ value: UInt64, forKey key: Key) throws { try encoder(for: key).encode(value) }
-    func encode(_ value: Float, forKey key: Key)  throws { try encoder(for: key).encode(value) }
-    func encode(_ value: Double, forKey key: Key) throws { try encoder(for: key).encode(value) }
-    func encode(_ value: String, forKey key: Key) throws { try encoder(for: key).encode(value) }
-    func encode<T>(_ value: T, forKey key: Key)   throws where T: Encodable { try encoder(for: key).encode(value) }
+    func encodeNil(forKey key: Key)             throws { try encoder(for: key).encodeNil() }
+    func encode<T>(_ value: T, forKey key: Key) throws where T: Primitive { try encoder(for: key).encode(value) }
+    func encode<T>(_ value: T, forKey key: Key) throws where T: Encodable { try encoder(for: key).encode(value) }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type,
                                     forKey key: Key) -> KeyedEncodingContainer<NestedKey> {
@@ -221,22 +208,9 @@ private struct _UnkeyedEncodingContainer: UnkeyedEncodingContainer {
 
     var codingPath: [CodingKey] { return encoder.codingPath }
     var count: Int { return encoder.array.count }
-    func encodeNil()             throws { try currentEncoder.encodeNil() }
-    func encode(_ value: Bool)   throws { try currentEncoder.encode(value) }
-    func encode(_ value: Int)    throws { try currentEncoder.encode(value) }
-    func encode(_ value: Int8)   throws { try currentEncoder.encode(value) }
-    func encode(_ value: Int16)  throws { try currentEncoder.encode(value) }
-    func encode(_ value: Int32)  throws { try currentEncoder.encode(value) }
-    func encode(_ value: Int64)  throws { try currentEncoder.encode(value) }
-    func encode(_ value: UInt)   throws { try currentEncoder.encode(value) }
-    func encode(_ value: UInt8)  throws { try currentEncoder.encode(value) }
-    func encode(_ value: UInt16) throws { try currentEncoder.encode(value) }
-    func encode(_ value: UInt32) throws { try currentEncoder.encode(value) }
-    func encode(_ value: UInt64) throws { try currentEncoder.encode(value) }
-    func encode(_ value: Float)  throws { try currentEncoder.encode(value) }
-    func encode(_ value: Double) throws { try currentEncoder.encode(value) }
-    func encode(_ value: String) throws { try currentEncoder.encode(value) }
-    func encode<T>(_ value: T)   throws where T: Encodable { try currentEncoder.encode(value) }
+    func encodeNil()           throws { try currentEncoder.encodeNil() }
+    func encode<T>(_ value: T) throws where T: Primitive { try currentEncoder.encode(value) }
+    func encode<T>(_ value: T) throws where T: Encodable { try currentEncoder.encode(value) }
 
     func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> {
         return currentEncoder.container(keyedBy: keyType)
@@ -250,22 +224,8 @@ extension ObjectEncoder.Encoder: SingleValueEncodingContainer {
 
     // MARK: - Swift.SingleValueEncodingContainer Methods
 
-    public final func encodeNil()             throws { assertCanEncodeNewValue(); object = NSNull() }
-    public final func encode(_ value: Bool)   throws { try box(value) }
-    public final func encode(_ value: Int)    throws { try box(value) }
-    public final func encode(_ value: Int8)   throws { try box(value) }
-    public final func encode(_ value: Int16)  throws { try box(value) }
-    public final func encode(_ value: Int32)  throws { try box(value) }
-    public final func encode(_ value: Int64)  throws { try box(value) }
-    public final func encode(_ value: UInt)   throws { try box(value) }
-    public final func encode(_ value: UInt8)  throws { try box(value) }
-    public final func encode(_ value: UInt16) throws { try box(value) }
-    public final func encode(_ value: UInt32) throws { try box(value) }
-    public final func encode(_ value: UInt64) throws { try box(value) }
-    public final func encode(_ value: Float)  throws { try box(value) }
-    public final func encode(_ value: Double) throws { try box(value) }
-    public final func encode(_ value: String) throws { try box(value) }
-
+    public final func encodeNil()           throws { assertCanEncodeNewValue(); object = NSNull() }
+    public final func encode<T>(_ value: T) throws where T: Primitive { try box(value) }
     public final func encode<T>(_ value: T) throws where T: Encodable {
         assertCanEncodeNewValue()
         if try !applyStrategy(value) {
@@ -300,6 +260,22 @@ extension ObjectEncoder.Encoder: SingleValueEncodingContainer {
         )
     }
 }
+
+public protocol Primitive: Encodable {}
+extension Bool: Primitive {}
+extension Int: Primitive {}
+extension Int8: Primitive {}
+extension Int16: Primitive {}
+extension Int32: Primitive {}
+extension Int64: Primitive {}
+extension UInt: Primitive {}
+extension UInt8: Primitive {}
+extension UInt16: Primitive {}
+extension UInt32: Primitive {}
+extension UInt64: Primitive {}
+extension Float: Primitive {}
+extension Double: Primitive {}
+extension String: Primitive {}
 
 // MARK: - CodingKey for `_UnkeyedEncodingContainer`, `_UnkeyedDecodingContainer`, `superEncoders` or `superDecoders`
 
