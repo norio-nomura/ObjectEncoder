@@ -172,20 +172,13 @@ private struct _KeyedDecodingContainer<Key: CodingKey> : KeyedDecodingContainerP
     }
 
     func decode(_ type: Bool.Type, forKey key: Key)   throws -> Bool { return try decoder(for: key).decode(type) }
-    func decode(_ type: Int.Type, forKey key: Key)    throws -> Int { return try decoder(for: key).decode(type) }
-    func decode(_ type: Int8.Type, forKey key: Key)   throws -> Int8 { return try decoder(for: key).decode(type) }
-    func decode(_ type: Int16.Type, forKey key: Key)  throws -> Int16 { return try decoder(for: key).decode(type) }
-    func decode(_ type: Int32.Type, forKey key: Key)  throws -> Int32 { return try decoder(for: key).decode(type) }
-    func decode(_ type: Int64.Type, forKey key: Key)  throws -> Int64 { return try decoder(for: key).decode(type) }
-    func decode(_ type: UInt.Type, forKey key: Key)   throws -> UInt { return try decoder(for: key).decode(type) }
-    func decode(_ type: UInt8.Type, forKey key: Key)  throws -> UInt8 { return try decoder(for: key).decode(type) }
-    func decode(_ type: UInt16.Type, forKey key: Key) throws -> UInt16 { return try decoder(for: key).decode(type) }
-    func decode(_ type: UInt32.Type, forKey key: Key) throws -> UInt32 { return try decoder(for: key).decode(type) }
-    func decode(_ type: UInt64.Type, forKey key: Key) throws -> UInt64 { return try decoder(for: key).decode(type) }
-    func decode(_ type: Float.Type, forKey key: Key)  throws -> Float { return try decoder(for: key).decode(type) }
-    func decode(_ type: Double.Type, forKey key: Key) throws -> Double { return try decoder(for: key).decode(type) }
     func decode(_ type: String.Type, forKey key: Key) throws -> String { return try decoder(for: key).decode(type) }
-    func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T { return try decoder(for: key).decode(type) }
+    func decode<T>(_ type: T.Type, forKey key: Key)   throws -> T where T: ShouldNotBeDecodedFromBool {
+        return try decoder(for: key).decode(type)
+    }
+    func decode<T>(_ type: T.Type, forKey key: Key)   throws -> T where T: Decodable {
+        return try decoder(for: key).decode(type)
+    }
 
     func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type,
                                     forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
@@ -242,20 +235,13 @@ private struct _UnkeyedDecodingContainer: UnkeyedDecodingContainer {
     }
 
     mutating func decode(_ type: Bool.Type)   throws -> Bool { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: Int.Type)    throws -> Int { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: Int8.Type)   throws -> Int8 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: Int16.Type)  throws -> Int16 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: Int32.Type)  throws -> Int32 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: Int64.Type)  throws -> Int64 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: UInt.Type)   throws -> UInt { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: UInt8.Type)  throws -> UInt8 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: UInt16.Type) throws -> UInt16 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: UInt32.Type) throws -> UInt32 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: UInt64.Type) throws -> UInt64 { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: Float.Type)  throws -> Float { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode(_ type: Double.Type) throws -> Double { return try currentDecoder { try $0.decode(type) } }
     mutating func decode(_ type: String.Type) throws -> String { return try currentDecoder { try $0.decode(type) } }
-    mutating func decode<T: Decodable>(_ type: T.Type) throws -> T { return try currentDecoder { try $0.decode(type) } }
+    mutating func decode<T>(_ type: T.Type)   throws -> T where T: ShouldNotBeDecodedFromBool {
+        return try currentDecoder { try $0.decode(type) }
+    }
+    mutating func decode<T>(_ type: T.Type)   throws -> T where T: Decodable {
+        return try currentDecoder { try $0.decode(type) }
+    }
 
     mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> {
         return try currentDecoder { try $0.container(keyedBy: type) }
@@ -292,20 +278,11 @@ extension ObjectDecoder.Decoder: SingleValueDecodingContainer {
 
     public func decodeNil() -> Bool { return object is NSNull }
     public func decode(_ type: Bool.Type)   throws -> Bool { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: Int.Type)    throws -> Int { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: Int8.Type)   throws -> Int8 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: Int16.Type)  throws -> Int16 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: Int32.Type)  throws -> Int32 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: Int64.Type)  throws -> Int64 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: UInt.Type)   throws -> UInt { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: UInt8.Type)  throws -> UInt8 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: UInt16.Type) throws -> UInt16 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: UInt32.Type) throws -> UInt32 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: UInt64.Type) throws -> UInt64 { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: Float.Type)  throws -> Float { return try applyStrategy(type) ?? cast() }
-    public func decode(_ type: Double.Type) throws -> Double { return try applyStrategy(type) ?? cast() }
     public func decode(_ type: String.Type) throws -> String { return try applyStrategy(type) ?? cast() }
-    public func decode<T: Decodable>(_ type: T.Type) throws -> T {
+    public func decode<T>(_ type: T.Type)   throws -> T where T: ShouldNotBeDecodedFromBool {
+        return try applyStrategy(type) ?? cast()
+    }
+    public func decode<T>(_ type: T.Type)   throws -> T where T: Decodable {
         return try applyStrategy(type) ?? type.init(from: self)
     }
 }
@@ -313,7 +290,7 @@ extension ObjectDecoder.Decoder: SingleValueDecodingContainer {
 // MARK: - ShouldNotBeDecodedFromBool
 // https://github.com/apple/swift/pull/11885
 
-private protocol ShouldNotBeDecodedFromBool {
+public protocol ShouldNotBeDecodedFromBool: Decodable {
     // Swift 4.0 on darwin, Swift 4.0.2 on swift-corelibs-foundation
     init?(exactly number: NSNumber)
 }
