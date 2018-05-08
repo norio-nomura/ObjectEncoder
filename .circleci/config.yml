@@ -58,10 +58,15 @@ jobs:
       - image: norionomura/swiftlint:swift-4.0.3
     steps: *steps-for-linux
 
-  linux_swift_4.1:
+  linux_swift_4.1.0:
     docker:
-      - image: norionomura/swift:swift-4.1-branch
-    steps: *steps-for-linux-without-swiftlint
+      - image: norionomura/swiftlint:swift-4.1.0
+    steps: *steps-for-linux
+
+  linux_swift_4.1.1:
+    docker:
+      - image: norionomura/swiftlint:swift-4.1.1
+    steps: *steps-for-linux
 
 workflows:
   version: 2
@@ -73,4 +78,5 @@ workflows:
       - xcode_9.3
       - linux_swift_4.0.2
       - linux_swift_4.0.3
-      - linux_swift_4.1
+      - linux_swift_4.1.0
+      - linux_swift_4.1.1
