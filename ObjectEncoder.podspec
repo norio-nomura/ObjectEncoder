@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.author       = 'Norio Nomura'
   s.source       = { :git => 'https://github.com/norio-nomura/ObjectEncoder.git', :tag => "#{s.version}" }
   s.source_files = 'Sources/ObjectEncoder/*.swift'
-  s.osx.deployment_target = '10.0'
+  s.osx.deployment_target = '10.9'
   s.ios.deployment_target = '8.0'
   s.tvos.deployment_target = '9.0'
   s.watchos.deployment_target = '2.0'
