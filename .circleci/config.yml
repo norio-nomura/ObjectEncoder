@@ -12,6 +12,13 @@ aliases:
     - run: swift test
     - run: bash <(curl -s https://codecov.io/bash)
 
+  - &steps-for-cocoapods
+    - checkout
+    - run: echo "2.5" > ~/.ruby-version
+    - run: gem install cocoapods --pre
+    - run: curl -sS https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash
+    - run: pod lib lint ObjectEncoder.podspec
+
   - &steps-for-linux
     - checkout
     - run: swift test
@@ -30,7 +37,7 @@ jobs:
 
   xcode_9.0:
     macos:
-      xcode: "9.0"
+      xcode: "9.0.1"
     steps: *steps-for-xcode
 
   xcode_9.1:
@@ -45,8 +52,29 @@ jobs:
 
   xcode_9.3:
     macos:
-      xcode: "9.3.0"
+      xcode: "9.3.1"
     steps: *steps-for-xcode
+
+  xcode_9.4:
+    macos:
+      xcode: "9.4.1"
+    steps: *steps-for-xcode
+
+  xcode_10.0:
+    macos:
+      xcode: "10.0.0"
+    steps: *steps-for-xcode
+
+  xcode_10.1:
+    macos:
+      xcode: "10.1.0"
+    steps: *steps-for-xcode
+
+  cocoapods:
+    shell: /bin/bash --login -eo pipefail
+    macos:
+      xcode: "10.1.0"
+    steps: *steps-for-cocoapods
 
   linux_swift_4.0.2:
     docker:
@@ -68,10 +96,20 @@ jobs:
       - image: norionomura/swiftlint:swift-4.1.1
     steps: *steps-for-linux
 
-  linux_swift_4.2:
+  linux_swift_4.1.2:
     docker:
-      - image: norionomura/swift:swift-4.2-branch
-    steps: *steps-for-linux-without-swiftlint
+      - image: norionomura/swiftlint:swift-4.1.2
+    steps: *steps-for-linux
+
+  linux_swift_4.2.0:
+    docker:
+      - image: norionomura/swiftlint:swift-4.2.0
+    steps: *steps-for-linux
+
+  linux_swift_4.2.1:
+    docker:
+      - image: norionomura/swiftlint:swift-4.2.1
+    steps: *steps-for-linux
 
 workflows:
   version: 2
@@ -81,8 +119,14 @@ workflows:
       - xcode_9.1
       - xcode_9.2
       - xcode_9.3
+      - xcode_9.4
+      - xcode_10.0
+      - xcode_10.1
+      - cocoapods
       - linux_swift_4.0.2
       - linux_swift_4.0.3
       - linux_swift_4.1.0
       - linux_swift_4.1.1
-      - linux_swift_4.2
+      - linux_swift_4.1.2
+      - linux_swift_4.2.0
+      - linux_swift_4.2.1
