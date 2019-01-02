@@ -122,6 +122,7 @@ class TestJSONEncoder : TestJSONEncoderSuper {
 
   // MARK: - Output Formatting Tests
   func testEncodingOutputFormattingDefault() {
+#if !swift(>=4.1.50)
     let expectedJSON = "{\"name\":\"Johnny Appleseed\",\"email\":\"appleseed@apple.com\"}".data(using: .utf8)!
     let person = Person.testValue
 #if _runtime(_ObjC)
@@ -129,15 +130,18 @@ class TestJSONEncoder : TestJSONEncoderSuper {
 #else
     print("Skip \(#function) since the order of elements on enumerating dictionary is not stable on swift-corelibs-foundation.")
 #endif
+#endif
   }
 
   func testEncodingOutputFormattingPrettyPrinted() {
+#if !swift(>=4.1.50)
     let expectedJSON = "{\n  \"name\" : \"Johnny Appleseed\",\n  \"email\" : \"appleseed@apple.com\"\n}".data(using: .utf8)!
     let person = Person.testValue
 #if _runtime(_ObjC)
     _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.prettyPrinted])
 #else
     print("Skip \(#function) since the order of elements on enumerating dictionary is not stable on swift-corelibs-foundation.")
+#endif
 #endif
   }
 
