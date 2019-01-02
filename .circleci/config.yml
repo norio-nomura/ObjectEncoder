@@ -14,7 +14,7 @@ aliases:
 
   - &steps-for-cocoapods
     - checkout
-    - run: echo "ruby-2.6" > ~/.ruby-version
+    - run: echo "2.5" > ~/.ruby-version
     - run: gem install cocoapods --pre
     - run: curl -sS https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash
     - run: pod lib lint ObjectEncoder.podspec
