@@ -64,6 +64,8 @@ jobs:
         testRunner: JUnit
         testResultsFiles: build/reports/**
       condition: succeededOrFailed()
+    - script: set -o pipefail && bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
+      displayName: Upload coverage to codecov.io
 
 - job: pod_lib_lint
   pool:
