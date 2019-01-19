@@ -63,3 +63,16 @@ workflows:
       - build_with_image:
           name: swift-tensorflow
           image: norionomura/swift-tensorflow
+
+  daily:
+    triggers:
+      - schedule:
+          cron: "0 4 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - build_with_image:
+          name: swift-5.0-branch
+          image: norionomura/swift:swift-5.0-branch
