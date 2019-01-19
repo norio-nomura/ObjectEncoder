@@ -1,132 +1,65 @@
-aliases:
-  - &steps-for-xcode
-    - checkout
-    - run: |
-        ( xcodebuild -scheme ObjectEncoder-Package test
-          xcodebuild -scheme ObjectEncoder-Package test -sdk iphonesimulator -destination "name=iPhone 8"
-          xcodebuild -scheme ObjectEncoder-Package test -sdk appletvsimulator -destination "name=Apple TV 4K"
-          xcodebuild -scheme ObjectEncoder-Package build -sdk watchsimulator -destination "name=Apple Watch Series 3 - 38mm"
-        ) | xcpretty -r junit
-    - store_test_results:
-        path: build/reports/
-    - run: swift test
-    - run: bash <(curl -s https://codecov.io/bash)
+version: 2.1
 
-  - &steps-for-cocoapods
-    - checkout
-    - run: echo "2.5" > ~/.ruby-version
-    - run: gem install cocoapods --pre
-    - run: curl -sS https://cocoapods-specs.circleci.com/fetch-cocoapods-repo-from-s3.sh | bash
-    - run: pod lib lint ObjectEncoder.podspec
+commands:
+  swiftlint:
+    steps:
+      - run: mkdir -p build/reports/
+      - run: swiftlint lint --strict --reporter junit > build/reports/junit.xml
+      - store_test_results:
+          path: build/reports/
 
-  - &steps-for-linux
-    - checkout
-    - run: swift test
-    - run: mkdir -p build/reports/
-    - run: swiftlint lint --strict --reporter junit > build/reports/junit.xml
-    - store_test_results:
-        path: build/reports/
-
-  - &steps-for-linux-without-swiftlint
-    - checkout
-    - run: swift test
-    - run: mkdir -p build/reports/
-
-version: 2
 jobs:
-
-  xcode_9.0:
-    macos:
-      xcode: "9.0.1"
-    steps: *steps-for-xcode
-
-  xcode_9.1:
-    macos:
-      xcode: "9.1.0"
-    steps: *steps-for-xcode
-
-  xcode_9.2:
-    macos:
-      xcode: "9.2.0"
-    steps: *steps-for-xcode
-
-  xcode_9.3:
-    macos:
-      xcode: "9.3.1"
-    steps: *steps-for-xcode
-
-  xcode_9.4:
-    macos:
-      xcode: "9.4.1"
-    steps: *steps-for-xcode
-
-  xcode_10.0:
-    macos:
-      xcode: "10.0.0"
-    steps: *steps-for-xcode
-
-  xcode_10.1:
-    macos:
-      xcode: "10.1.0"
-    steps: *steps-for-xcode
-
-  cocoapods:
-    shell: /bin/bash --login -eo pipefail
-    macos:
-      xcode: "10.1.0"
-    steps: *steps-for-cocoapods
-
-  linux_swift_4.0.2:
+  build_with_image:
+    parameters:
+      image:
+        type: string
     docker:
-      - image: norionomura/swiftlint:swift-4.0.2
-    steps: *steps-for-linux
-
-  linux_swift_4.0.3:
-    docker:
-      - image: norionomura/swiftlint:swift-4.0.3
-    steps: *steps-for-linux
-
-  linux_swift_4.1.0:
-    docker:
-      - image: norionomura/swiftlint:swift-4.1.0
-    steps: *steps-for-linux
-
-  linux_swift_4.1.1:
-    docker:
-      - image: norionomura/swiftlint:swift-4.1.1
-    steps: *steps-for-linux
-
-  linux_swift_4.1.2:
-    docker:
-      - image: norionomura/swiftlint:swift-4.1.2
-    steps: *steps-for-linux
-
-  linux_swift_4.2.0:
-    docker:
-      - image: norionomura/swiftlint:swift-4.2.0
-    steps: *steps-for-linux
-
-  linux_swift_4.2.1:
-    docker:
-      - image: norionomura/swiftlint:swift-4.2.1
-    steps: *steps-for-linux
+      - image: << parameters.image >>
+    steps:
+      - checkout
+      - run: swift test
 
 workflows:
-  version: 2
   workflow:
     jobs:
-      - xcode_9.0
-      - xcode_9.1
-      - xcode_9.2
-      - xcode_9.3
-      - xcode_9.4
-      - xcode_10.0
-      - xcode_10.1
-      - cocoapods
-      - linux_swift_4.0.2
-      - linux_swift_4.0.3
-      - linux_swift_4.1.0
-      - linux_swift_4.1.1
-      - linux_swift_4.1.2
-      - linux_swift_4.2.0
-      - linux_swift_4.2.1
+      - build_with_image:
+          name: swift-4.0.2-RELEASE
+          image: norionomura/swiftlint:swift-4.0.2
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.0.3-RELEASE
+          image: norionomura/swiftlint:swift-4.0.3
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.1-RELEASE
+          image: norionomura/swiftlint:swift-4.1.0
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.1.1-RELEASE
+          image: norionomura/swiftlint:swift-4.1.1
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.1.2-RELEASE
+          image: norionomura/swiftlint:swift-4.1.2
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.1.3-RELEASE
+          image: norionomura/swiftlint:swift-4.1.3
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.2-RELEASE
+          image: norionomura/swiftlint:swift-4.2.0
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.2.1-RELEASE
+          image: norionomura/swiftlint:swift-4.2.1
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-5.0-branch
+          image: norionomura/swift:swift-5.0-branch
+      - build_with_image:
+          name: swift-nightly
+          image: norionomura/swift:nightly
+      - build_with_image:
+          name: swift-tensorflow
+          image: norionomura/swift-tensorflow
