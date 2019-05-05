@@ -145,7 +145,7 @@ extension ObjectDecoder.Decoder {
     }
 }
 
-private struct _KeyedDecodingContainer<Key: CodingKey> : KeyedDecodingContainerProtocol {
+private struct _KeyedDecodingContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
 
     private let decoder: ObjectDecoder.Decoder
     private let dictionary: [String: Any]

@@ -55,8 +55,28 @@ workflows:
           image: norionomura/swiftlint:swift-4.2.1
           post-steps: [swiftlint]
       - build_with_image:
-          name: swift-5.0-branch
-          image: norionomura/swift:swift-5.0-branch
+          name: swift-4.2.2-RELEASE
+          image: norionomura/swiftlint:swift-4.2.2
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.2.3-RELEASE
+          image: norionomura/swiftlint:swift-4.2.3
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-4.2.4-RELEASE
+          image: norionomura/swiftlint:swift-4.2.4
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-5.0-RELEASE
+          image: norionomura/swiftlint:swift-5.0.0
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-5.0.1-RELEASE
+          image: norionomura/swiftlint:swift-5.0.1
+          post-steps: [swiftlint]
+      - build_with_image:
+          name: swift-5.1-branch
+          image: norionomura/swift:swift-5.1-branch
       - build_with_image:
           name: swift-nightly
           image: norionomura/swift:nightly
@@ -74,5 +94,5 @@ workflows:
                 - master
     jobs:
       - build_with_image:
-          name: swift-5.0-branch
-          image: norionomura/swift:swift-5.0-branch
+          name: swift-5.1-branch
+          image: norionomura/swift:swift-5.1-branch

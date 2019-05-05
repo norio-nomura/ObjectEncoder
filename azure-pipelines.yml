@@ -4,7 +4,7 @@ trigger:
 jobs:
 - job: macOS
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: $[ coalesce(variables['VM_IMAGE'], 'macOS 10.13') ]
   strategy:
     maxParallel: 10
     matrix:
@@ -23,6 +23,14 @@ jobs:
         XCODE_FLAGS_FOR_TEST: -parallel-testing-enabled NO
       Xcode 10.1:
         DEVELOPER_DIR: '/Applications/Xcode_10.1.app'
+        XCODE_FLAGS_FOR_TEST: -parallel-testing-enabled NO
+      Xcode 10.2:
+        DEVELOPER_DIR: '/Applications/Xcode_10.2.app'
+        VM_IMAGE: 'macOS 10.14'
+        XCODE_FLAGS_FOR_TEST: -parallel-testing-enabled NO
+      Xcode 10.2.1:
+        DEVELOPER_DIR: '/Applications/Xcode_10.2.1.app'
+        VM_IMAGE: 'macOS 10.14'
         XCODE_FLAGS_FOR_TEST: -parallel-testing-enabled NO
   steps:
     - script: |
@@ -69,9 +77,9 @@ jobs:
 
 - job: pod_lib_lint
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS 10.14'
   variables:
-    DEVELOPER_DIR: '/Applications/Xcode_9.4.1.app'
+    DEVELOPER_DIR: '/Applications/Xcode_10.2.1.app'
   steps:
     - script: pod lib lint
       displayName: pod lib lint
