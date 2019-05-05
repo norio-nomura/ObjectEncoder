@@ -94,5 +94,5 @@ workflows:
                 - master
     jobs:
       - build_with_image:
-          name: swift-5.0-branch
-          image: norionomura/swift:swift-5.0-branch
+          name: swift-5.1-branch
+          image: norionomura/swift:swift-5.1-branch
