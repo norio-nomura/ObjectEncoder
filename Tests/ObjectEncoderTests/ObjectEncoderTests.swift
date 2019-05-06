@@ -89,21 +89,10 @@ class ObjectEncoderTests: XCTestCase {
         formatter.timeStyle = .full
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "GMT")
-    #if _runtime(_ObjC)
-        let expected = "Thursday, January 1, 1970 at 12:16:40 AM Greenwich Mean Time"
-    #else
-        #if swift(>=4.1.50)
-            #if compiler(>=5)
-                let expected = "Thursday, January 1, 1970 at 12:16:40 AM Greenwich Mean Time"
-            #else
-                let expected = "Thursday, January 1, 1970 at 12:16:40 AM GMT"
-            #endif
-        #else
-            let expected = "Thursday, January 1, 1970 at 12:16:40 AM GMT"
-        #endif
-    #endif
+        let date = Date(timeIntervalSince1970: 1000)
+        let expected = formatter.string(from: date)
         // Cannot encode an arbitrary number of seconds since we've lost precision since 1970.
-        _testRoundTrip(of: Date(timeIntervalSince1970: 1000),
+        _testRoundTrip(of: date,
                        expectedObject: expected,
                        dateEncodingStrategy: .formatted(formatter),
                        dateDecodingStrategy: .formatted(formatter))
