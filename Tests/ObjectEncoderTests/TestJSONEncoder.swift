@@ -123,7 +123,9 @@ class TestJSONEncoder : TestJSONEncoderSuper {
   // MARK: - Output Formatting Tests
   func testEncodingOutputFormattingDefault() {
 #if !swift(>=4.1.50)
-    let expectedJSON = "{\"name\":\"Johnny Appleseed\",\"email\":\"appleseed@apple.com\"}".data(using: .utf8)!
+    let expectedJSON = (MemoryLayout<Int>.size == 8
+        ? "{\"name\":\"Johnny Appleseed\",\"email\":\"appleseed@apple.com\"}"
+        : "{\"email\":\"appleseed@apple.com\",\"name\":\"Johnny Appleseed\"}").data(using: .utf8)!
     let person = Person.testValue
 #if _runtime(_ObjC)
     _testRoundTrip(of: person, expectedJSON: expectedJSON)
@@ -135,7 +137,9 @@ class TestJSONEncoder : TestJSONEncoderSuper {
 
   func testEncodingOutputFormattingPrettyPrinted() {
 #if !swift(>=4.1.50)
-    let expectedJSON = "{\n  \"name\" : \"Johnny Appleseed\",\n  \"email\" : \"appleseed@apple.com\"\n}".data(using: .utf8)!
+    let expectedJSON = (MemoryLayout<Int>.size == 8
+        ? "{\n  \"name\" : \"Johnny Appleseed\",\n  \"email\" : \"appleseed@apple.com\"\n}"
+        : "{\n  \"email\" : \"appleseed@apple.com\",\n  \"name\" : \"Johnny Appleseed\"\n}").data(using: .utf8)!
     let person = Person.testValue
 #if _runtime(_ObjC)
     _testRoundTrip(of: person, expectedJSON: expectedJSON, outputFormatting: [.prettyPrinted])
