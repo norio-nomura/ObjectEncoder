@@ -27,8 +27,6 @@ jobs:
             flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
           - version: '10.1'
             flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
-          - version: '10.2'
-            flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
           - version: '10.2.1'
             flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
           - version: '10.3'

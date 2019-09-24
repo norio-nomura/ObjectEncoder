@@ -11,7 +11,7 @@ jobs:
   macOS:
     strategy:
       matrix:
-        xcode: ['9.4.1', '10', '10.1', '10.2', '10.2.1', '10.3', '11']
+        xcode: ['9.4.1', '10', '10.1', '10.2.1', '10.3', '11']
     runs-on: macOS-10.14
     steps:
       - uses: actions/checkout@v1
