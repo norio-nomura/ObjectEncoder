@@ -3,23 +3,31 @@ name: SwiftPM
 on:
   push:
     branches: [master]
-    paths: ['Sources/*', 'Tests/*', 'Package*', '.github/workflows/swiftpm.yml']
+    paths: 
+      - '.github/workflows/swiftpm.yml'
+      - 'Package*'
+      - 'Sources/*/*'
+      - 'Tests/*'
+      - 'Tests/*/*'
   pull_request:
-    paths: ['Sources/*', 'Tests/*', 'Package*', '.github/workflows/swiftpm.yml']
+    paths: 
+      - '.github/workflows/swiftpm.yml'
+      - 'Package*'
+      - 'Sources/*/*'
+      - 'Tests/*'
+      - 'Tests/*/*'
 
 jobs:
-  macOS:
+  Xcode:
     strategy:
       matrix:
         xcode: ['9.4.1', '10', '10.1', '10.2.1', '10.3', '11']
     runs-on: macOS-10.14
     steps:
       - uses: actions/checkout@v1
-      - env:
-          DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app
+      - env: { 'DEVELOPER_DIR': '/Applications/Xcode_${{ matrix.xcode }}.app' }
         run: swift -version
-      - env:
-          DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app
+      - env: { 'DEVELOPER_DIR': '/Applications/Xcode_${{ matrix.xcode }}.app' }
         run: swift test --parallel
 
   Linux:
