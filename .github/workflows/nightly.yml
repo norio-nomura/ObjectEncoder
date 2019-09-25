@@ -4,7 +4,12 @@ on:
   push:
     branches: [master]
   pull_request:
-    paths: ['Sources/*', 'Tests/*', 'Package*', '.github/workflows/nightly.yml']
+    paths: 
+      - '.github/workflows/nightly.yml'
+      - 'Package*'
+      - 'Sources/*/*'
+      - 'Tests/*'
+      - 'Tests/*/*'
   schedule:
     - cron: '0 4 * * *'
 
