@@ -3,9 +3,23 @@ name: pod lib lint
 on:
   push:
     branches: [master]
-    paths: ['Sources/*', 'Tests/*', 'ObjectEncoder.xcodeproj/*', '*.podspec', '.github/workflows/pod_lib_lint.yml']
+    paths: 
+      - '.github/workflows/pod_lib_lint.yml'
+      - '*.podspec'
+      - 'ObjectEncoder.xcodeproj/*'
+      - 'ObjectEncoder.xcodeproj/*/*'
+      - 'ObjectEncoder.xcodeproj/*/*/*'
+      - 'Sources/*/*'
+      - 'Tests/*/*'
   pull_request:
-    paths: ['Sources/*', 'Tests/*', 'ObjectEncoder.xcodeproj/*', '*.podspec', '.github/workflows/pod_lib_lint.yml']
+    paths: 
+      - '.github/workflows/pod_lib_lint.yml'
+      - '*.podspec'
+      - 'ObjectEncoder.xcodeproj/*'
+      - 'ObjectEncoder.xcodeproj/*/*'
+      - 'ObjectEncoder.xcodeproj/*/*/*'
+      - 'Sources/*/*'
+      - 'Tests/*/*'
 
 jobs:
   pod_lib_lint:
