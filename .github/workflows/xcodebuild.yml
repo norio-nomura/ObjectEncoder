@@ -4,22 +4,18 @@ on:
   push:
     branches: [master]
     paths: 
-      - '!Tests/LinuxMain.swift'
       - '.github/workflows/xcodebuild.yml'
-      - 'ObjectEncoder.xcodeproj/*'
-      - 'ObjectEncoder.xcodeproj/*/*'
-      - 'ObjectEncoder.xcodeproj/*/*/*'
-      - 'Sources/*/*'
-      - 'Tests/*/*'
+      - 'ObjectEncoder.xcodeproj/**'
+      - 'Sources/**'
+      - 'Tests/**'
+      - '!Tests/LinuxMain.swift'
   pull_request:
     paths:
-      - '!Tests/LinuxMain.swift'
       - '.github/workflows/xcodebuild.yml'
-      - 'ObjectEncoder.xcodeproj/*'
-      - 'ObjectEncoder.xcodeproj/*/*'
-      - 'ObjectEncoder.xcodeproj/*/*/*'
-      - 'Sources/*/*'
-      - 'Tests/*/*'
+      - 'ObjectEncoder.xcodeproj/**'
+      - 'Sources/**'
+      - 'Tests/**'
+      - '!Tests/LinuxMain.swift'
 
 jobs:
   xcodebuild:
