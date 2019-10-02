@@ -19,14 +19,14 @@ jobs:
   Xcode:
     strategy:
       matrix:
-        xcode: ['9.4.1', '10', '10.1', '10.2.1', '10.3', '11']
+        xcode_version: ['9.4.1', '10', '10.1', '10.2.1', '10.3', '11']
     runs-on: macOS-10.14
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode_version }}.app
     steps:
       - uses: actions/checkout@v1
-      - env: { 'DEVELOPER_DIR': '/Applications/Xcode_${{ matrix.xcode }}.app' }
-        run: swift -version
-      - env: { 'DEVELOPER_DIR': '/Applications/Xcode_${{ matrix.xcode }}.app' }
-        run: swift test --parallel
+      - run: swift -version
+      - run: swift test --parallel
 
   Linux:
     strategy:
