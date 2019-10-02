@@ -24,63 +24,56 @@ jobs:
         xcode:
           - version: '9.4.1'
           - version: '10'
-            flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
+            flags_for_test: -parallel-testing-enabled NO
           - version: '10.1'
-            flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
+            flags_for_test: -parallel-testing-enabled NO
+          - version: '10.2'
+            flags_for_test: -parallel-testing-enabled NO
           - version: '10.2.1'
-            flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
+            flags_for_test: -parallel-testing-enabled NO
           - version: '10.3'
-            flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
+            flags_for_test: -parallel-testing-enabled NO -enableCodeCoverage YES 
           - version: '11'
-            flag_for_test: -enableCodeCoverage YES -parallel-testing-enabled NO
+            flags_for_test: -parallel-testing-enabled NO
+        xcode_flags: ['-scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj']
     runs-on: macOS-10.14
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode.version }}.app
     steps:
       - uses: actions/checkout@v1
       - run: xcodebuild -version
-        env: 
-          DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode.version }}.app
       - name: macOS
         if: always()
-        env:
-          DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode.version }}.app
-        run: >
-          xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj 
-          ${{ matrix.xcode.flag_for_test }} test | xcpretty
+        run: xcodebuild ${{ matrix.xcode_flags }} ${{ matrix.xcode.flags_for_test }} test | xcpretty
         shell: bash
       - name: iPhone Simulator
         if: always()
-        env:
-          DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode.version }}.app
-        run: > 
-          xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj
-          ${{ matrix.xcode.flag_for_test }} test -sdk iphonesimulator -destination "name=iPhone 8" | xcpretty
+        run: xcodebuild ${{ matrix.xcode_flags }} ${{ matrix.xcode.flags_for_test }} test -sdk iphonesimulator -destination "name=iPhone 8" | xcpretty
         shell: bash
       - name: Apple TV Simulator
         if: always()
-        env:
-          DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode.version }}.app
-        run: >
-          xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj
-          ${{ matrix.xcode.flag_for_test }} test -sdk appletvsimulator -destination "name=Apple TV 4K" | xcpretty
+        run: xcodebuild ${{ matrix.xcode_flags }} ${{ matrix.xcode.flags_for_test }} test -sdk appletvsimulator -destination "name=Apple TV 4K" | xcpretty
         shell: bash
-      - run: curl -s https://codecov.io/bash | bash -s -- -t ${{ secrets.CODECOV_TOKEN }}
+      - name: watchOS Simulator
         if: always()
+        run: xcodebuild ${{ matrix.xcode_flags }} build -sdk watchsimulator | xcpretty
+        shell: bash
+      - name: Codecov
+        if: contains(matrix.xcode.flags_for_test, '-enableCodeCoverage YES')
+        run: curl -s https://codecov.io/bash | bash -s -- -t ${{ secrets.CODECOV_TOKEN }}
         shell: bash
 
   Analyze:
     runs-on: macOS-10.14
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_10.3.app
     steps:
       - uses: actions/checkout@v1
       - name: Generate xcodebuild.log
         if: always()
-        env:
-          DEVELOPER_DIR: /Applications/Xcode_10.3.app
-        run: >
-          xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj 
-          ${{ matrix.xcode.flag_for_test }} clean build-for-testing > xcodebuild.log
+        run: xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj clean build-for-testing > xcodebuild.log
         shell: bash
       - name: Install SwiftLint
-        run: >
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install https://raw.github.com/Homebrew/homebrew-core/master/Formula/swiftlint.rb
+        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install https://raw.github.com/Homebrew/homebrew-core/master/Formula/swiftlint.rb
       - name: Run SwiftLint Analyze
         run: swiftlint analyze --strict --compiler-log-path xcodebuild.log

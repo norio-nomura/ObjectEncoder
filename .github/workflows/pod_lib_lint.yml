@@ -23,8 +23,8 @@ jobs:
   pod_lib_lint:
     name: pod lib lint
     runs-on: macOS-10.14
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_10.3.app
     steps:
       - uses: actions/checkout@v1
       - run: pod lib lint
-        env:
-          DEVELOPER_DIR: /Applications/Xcode_10.3.app
