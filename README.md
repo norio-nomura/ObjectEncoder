@@ -1,9 +1,9 @@
 # ObjectEncoder for Swift
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
-[![SwiftPM](https://github.com/norio-nomura/ObjectEncoder/workflows/SwiftPM/badge.svg)](https://launch-editor.github.com/actions?workflowID=SwiftPM&event=pull_request&nwo=norio-nomura%2FObjectEncoder)
-[![Nightly](https://github.com/norio-nomura/ObjectEncoder/workflows/Nightly/badge.svg)](https://launch-editor.github.com/actions?workflowID=Nightly&event=pull_request&nwo=norio-nomura%2FObjectEncoder)
-[![xcodebuild](https://github.com/norio-nomura/ObjectEncoder/workflows/xcodebuild/badge.svg)](https://launch-editor.github.com/actions?workflowID=xcodebuild&event=pull_request&nwo=norio-nomura%2FObjectEncoder)
-[![pod lib lint](https://github.com/norio-nomura/ObjectEncoder/workflows/pod%20lib%20lint/badge.svg)](https://launch-editor.github.com/actions?workflowID=pod%20lib%20lint&event=pull_request&nwo=norio-nomura%2FObjectEncoder)
+[![SwiftPM](https://github.com/norio-nomura/ObjectEncoder/workflows/SwiftPM/badge.svg)](https://github.com/norio-nomura/ObjectEncoder/actions?query=workflow%3ASwiftPM)
+[![xcodebuild](https://github.com/norio-nomura/ObjectEncoder/workflows/xcodebuild/badge.svg)](https://github.com/norio-nomura/ObjectEncoder/actions?query=workflow%3Axcodebuild)
+[![pod lib lint](https://github.com/norio-nomura/ObjectEncoder/workflows/pod%20lib%20lint/badge.svg)](https://github.com/norio-nomura/ObjectEncoder/actions?query=workflow%3A%22pod+lib+lint%22)
+[![Nightly](https://github.com/norio-nomura/ObjectEncoder/workflows/Nightly/badge.svg)](https://github.com/norio-nomura/ObjectEncoder/actions?query=workflow%3ANightly)
 [![codecov](https://codecov.io/gh/norio-nomura/ObjectEncoder/branch/master/graph/badge.svg)](https://codecov.io/gh/norio-nomura/ObjectEncoder)
 
 [SE-0167 Swift Encoders](https://github.com/apple/swift-evolution/blob/master/proposals/0167-swift-encoders.md) implementation using `[String: Any]`, `[Any]` or `Any` as payload.
@@ -38,7 +38,7 @@ decoded[0].p1   // "string"
 
 ## Requirements
 
-* Swift 4.0+ on Darwin, Swift 4.0.2+ on swift-corelibs-foundation
+* Swift 4.1+
 
 ## Author
 
