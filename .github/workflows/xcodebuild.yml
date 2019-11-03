@@ -66,18 +66,3 @@ jobs:
         if: contains(matrix.xcode.flags_for_test, '-enableCodeCoverage YES')
         run: curl -s https://codecov.io/bash | bash -s -- -t ${{ secrets.CODECOV_TOKEN }}
         shell: bash
-
-  Analyze:
-    runs-on: macOS-10.14
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_10.3.app
-    steps:
-      - uses: actions/checkout@v1
-      - name: Generate xcodebuild.log
-        if: always()
-        run: xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj clean build-for-testing > xcodebuild.log
-        shell: bash
-      - name: Install SwiftLint
-        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install https://raw.github.com/Homebrew/homebrew-core/master/Formula/swiftlint.rb
-      - name: Run SwiftLint Analyze
-        run: swiftlint analyze --strict --compiler-log-path xcodebuild.log
