@@ -32,13 +32,13 @@ jobs:
           - version: '10.2.1'
             flags_for_test: -parallel-testing-enabled NO
           - version: '10.3'
-            flags_for_test: -parallel-testing-enabled NO -enableCodeCoverage YES 
+            flags_for_test: -parallel-testing-enabled NO
           - version: '11'
             flags_for_test: -parallel-testing-enabled NO
           - version: '11.1'
             flags_for_test: -parallel-testing-enabled NO
           - version: '11.2'
-            flags_for_test: -parallel-testing-enabled NO
+            flags_for_test: -parallel-testing-enabled NO -enableCodeCoverage YES 
         xcode_flags: ['-scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj']
     runs-on: macOS-10.14
     env:
@@ -64,5 +64,6 @@ jobs:
         shell: bash
       - name: Codecov
         if: contains(matrix.xcode.flags_for_test, '-enableCodeCoverage YES')
-        run: curl -s https://codecov.io/bash | bash -s -- -t ${{ secrets.CODECOV_TOKEN }}
+        run: '[[ -n "${CODECOV_TOKEN}" ]] && curl -s https://codecov.io/bash | bash -s'
         shell: bash
+        env: { 'CODECOV_TOKEN': '${{ secrets.CODECOV_TOKEN }}' }
