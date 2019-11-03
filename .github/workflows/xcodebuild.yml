@@ -35,6 +35,10 @@ jobs:
             flags_for_test: -parallel-testing-enabled NO -enableCodeCoverage YES 
           - version: '11'
             flags_for_test: -parallel-testing-enabled NO
+          - version: '11.1'
+            flags_for_test: -parallel-testing-enabled NO
+          - version: '11.2'
+            flags_for_test: -parallel-testing-enabled NO
         xcode_flags: ['-scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj']
     runs-on: macOS-10.14
     env:
