@@ -1,0 +1,34 @@
+name: SwiftLint Analyze
+
+on:
+  push:
+    branches: [master]
+    paths: 
+      - '.github/workflows/swiftlint_analyze.yml'
+      - 'ObjectEncoder.xcodeproj/**'
+      - 'Sources/**'
+      - 'Tests/**'
+      - '!Tests/LinuxMain.swift'
+  pull_request:
+    paths:
+      - '.github/workflows/swiftlint_analyze.yml'
+      - 'ObjectEncoder.xcodeproj/**'
+      - 'Sources/**'
+      - 'Tests/**'
+      - '!Tests/LinuxMain.swift'
+
+jobs:
+  Analyze:
+    runs-on: macOS-10.14
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_11.2.app
+    steps:
+      - uses: actions/checkout@v1
+      - name: Generate xcodebuild.log
+        if: always()
+        run: xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj clean build-for-testing > xcodebuild.log
+        shell: bash
+      - name: Install SwiftLint
+        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install https://raw.github.com/Homebrew/homebrew-core/master/Formula/swiftlint.rb
+      - name: Run SwiftLint Analyze
+        run: swiftlint analyze --strict --compiler-log-path xcodebuild.log
