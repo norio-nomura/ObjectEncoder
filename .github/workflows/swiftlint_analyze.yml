@@ -25,7 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Generate xcodebuild.log
-        if: always()
         run: xcodebuild -scheme ObjectEncoder-Package -project ObjectEncoder.xcodeproj clean build-for-testing > xcodebuild.log
         shell: bash
       - name: Install SwiftLint
